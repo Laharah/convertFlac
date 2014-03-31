@@ -4,13 +4,15 @@ from mutagen import File as mutagenFile
 from mutagen.flac import FLAC
 from mutagen.easyid3 import EasyID3
 from mutagen.easyid3 import EasyID3KeyError
+from optparse import OptionParser
+from optparse import OptionGroup
 import shutil
 import subprocess
 import os
 
 
 class convertFlac:
-    def __init__(self, targets, newFolder='', recursive=False, clone=False):
+    def __init__(self, targets, newFolder=None, recursive=False, clone=False):
 
         self.recursive = recursive
         self.clone = clone
@@ -26,8 +28,9 @@ class convertFlac:
         self.newFiles = {}
 
         self.newFolder = newFolder
-
-        #if cloning is requested without a destination, program defaults to cloning the folder side by side with the
+        if self.newFolder == None:
+            newFolder = ''
+            #if cloning is requested without a destination, program defaults to cloning the folder side by side with the
         #affix ' [MP3]'
         if newFolder == '' and self.clone == True:
             self.newFolder = os.path.join(os.path.dirname(targets[0]), targets[0] + ' [MP3]')
@@ -39,7 +42,7 @@ class convertFlac:
             self.newFolder = self.rootDir
 
         self.doConvert()
-        self.copyTags()
+        #tags will be copied directly after conversion incase operation is aborted
 
 
     def confirmTargetsValid(self, targets):
@@ -83,40 +86,37 @@ class convertFlac:
                 newFile = os.path.join(newPath, os.path.relpath(target.replace('.flac', '.mp3'), self.rootDir))
 
             self.newFiles[target] = newFile
-            print 'working on: ', target, ' : ', newFile
+            print '\nConverting: ', target, ' : ', newFile
             #uses flac to decode and pipe it's output into Lame
             #TODO: allow for custom lame arguments
             psFlac = subprocess.Popen(('flac', '-d', '-c', target), stdout=subprocess.PIPE)
             psLame = subprocess.call(
                 ('lame', '-V', '0', '-', newFile), stdin=psFlac.stdout)
-            print 'Flac Done.'
             psFlac.wait()
-            print 'Lame Done.'
+            self.copyTags(target)
         return
 
-    def copyTags(self):
+    def copyTags(self, target):
     #uses mutagen to duplicate valid tags from flac to MP3
-        for flacFile in self.flacFiles:
-            flacMeta = FLAC(flacFile)
-            try:
-                mp3Meta = EasyID3(self.newFiles[flacFile])
-                print mp3Meta
-            except:
-                print 'adding id3 header to', self.newFiles[flacFile]
-                mp3Meta = mutagenFile(self.newFiles[flacFile], easy=True)
-                mp3Meta.add_tags()
+        flacMeta = FLAC(target)
+        try:
+            mp3Meta = EasyID3(self.newFiles[target])
+            print mp3Meta
+        except:
+            print 'adding id3 header to', self.newFiles[target]
+            mp3Meta = mutagenFile(self.newFiles[target], easy=True)
+            mp3Meta.add_tags()
 
-            for key in flacMeta.keys():
-            #leveling tags cause errors on MP3 tags (too quiet on random tracks) so they are omited
-                if key.startswith('replay'):
-                    print 'skipping key:', key
-                else:
-                    try:
-                        mp3Meta[key] = flacMeta[key]
-                    except EasyID3KeyError:
-                        print 'could not add key: ', key
-                        print 'skipping'
-            mp3Meta.save()
+        for key in flacMeta.keys():
+        #leveling tags cause errors on MP3 tags (too quiet on random tracks) so they are omited
+            if key.startswith('replay'):
+                print 'skipping key:', key
+            else:
+                try:
+                    mp3Meta[key] = flacMeta[key]
+                except EasyID3KeyError:
+                    print 'could not add key: ', key
+        mp3Meta.save()
 
     def cloneFolder(self, source, dest):
         if self.recursive:
@@ -142,14 +142,33 @@ class convertFlac:
 
 
 def main():
-    #TODO: Make dynamic and accept arguments
-    args = 'F:\\Waste\\what.cd\\Chinese Dance Machine'
-    destFolder = 'F:\\temp [V0]'
+    usage = 'usage: "%prog [options[--output=PATH]] SOURCE"'
+    progDescription = 'accepts flec files or directorys, creating VO mp3 files from each flac'
+    parser = OptionParser(usage, description=progDescription)
+    parser.add_option('-o', '--output', dest='output', metavar='PATH', action='store',
+                      help="defines an output directory or file")
 
-    flacFiles = [x for x in os.listdir(os.getcwd()) if x.endswith('.flac')]
-    print flacFiles
+    group = OptionGroup(parser, 'Directory Options',
+                        'These options are used for determining behavior when being passed a directory ')
+    group.add_option('-c', '--clone', dest="clone", action='store_true', default=False,
+                     help="makes a clone of given directory, copying non-flac files and placing converted "
+                          "files in their correct place. if no output path is defined, 'SOURCEPATH [MP3]' will be used."
+                          " Output directory must not already exsist. DOES NOT IMPLY '-r'.")
+    group.add_option('-r', '--recursive', dest='recursive', action='store_true', default=False,
+                     help="recurses through a directory looking for flac files to convert, often used in conjuntion"
+                          " with '-c'. Maintains directory structure for converted files")
+    parser.add_option_group(group)
+    (options, args) = parser.parse_args()
 
-    temp = convertFlac(args, clone=True, recursive=True)
+    if len(args) < 1:
+        parser.error("You must specify a path where '.flac' files can be found")
+
+
+    #TODO: add support for multiple directories
+    #TODO: add delete flacs option
+
+    convertFlac(args, newFolder=options.output, clone=options.clone, recursive=options.recursive)
+
     return
 
 
