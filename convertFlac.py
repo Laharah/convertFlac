@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 ____author__ = 'Lunchbox'
 
 from mutagen import File as mutagenFile
@@ -29,10 +31,10 @@ class convertFlac:
 
         self.newFolder = newFolder
         if self.newFolder == None:
-            newFolder = ''
+            self.newFolder = ''
             #if cloning is requested without a destination, program defaults to cloning the folder side by side with the
         #affix ' [MP3]'
-        if newFolder == '' and self.clone == True:
+        if self.newFolder == '' and self.clone == True:
             self.newFolder = os.path.join(os.path.dirname(targets[0]), targets[0] + ' [MP3]')
 
         if self.targetIsDir and self.clone == True:
@@ -69,7 +71,7 @@ class convertFlac:
             flacs = [f for f in allFiles if f.endswith('.flac')]
             return flacs
         else:
-            return [os.path.join(dir, f) for f in os.listdir(dir) if f.endswith('.flac')]
+            return [os.path.join(dir, f) for f in os.listdir(unicode(dir)) if f.endswith('.flac')]
 
     def doConvert(self):
         newPath = self.newFolder
