@@ -14,14 +14,20 @@ import os
 
 
 class convertFlac:
-    def __init__(self, targets, newFolder=None, recursive=False, clone=False):
-
+    def __init__(self, targets, newFolder=None, recursive=False, clone=False, vbrlevel=0, cbr=None, lameargs=None):
         self.recursive = recursive
         self.clone = clone
+        self.vbrlevel = vbrlevel
+        self.cbr = cbr
         self.flacFiles = []
         self.targetIsDir = False
         if type(targets) != list:
             targets = [targets]
+        #lameargs need to be in tupple format for subprocess call
+        if lameargs is not None:
+            self.lameargs = tuple(lameargs.split(' '))
+        else:
+            self.lameargs = None
 
         #targets must be a flac file, a list of flac files, or a single directory (files must have '.flac' extention)
         if not self.confirmTargetsValid(targets):
@@ -45,7 +51,6 @@ class convertFlac:
 
         self.doConvert()
         #tags will be copied directly after conversion incase operation is aborted
-
 
     def confirmTargetsValid(self, targets):
         if len(targets) == 1:
@@ -74,32 +79,41 @@ class convertFlac:
             return [os.path.join(dir, f) for f in os.listdir(unicode(dir)) if f.endswith('.flac')]
 
     def doConvert(self):
+        """Convert flacs to mp3 V0 using lame and Copies tags from flac to new MP3."""
         newPath = self.newFolder
         if not os.path.exists(newPath):
             os.mkdir(newPath)
+
         for target in self.flacFiles:
-            #Forms file destination arguments
+            #Forms file destination arguments.
             newFile = os.path.join(newPath, os.path.basename(target.replace('.flac', '.mp3')))
 
             if self.recursive:
-            #special handeling for destination arguments to maintain folder structure during recursive runs
+                #special handeling for destination arguments to maintain folder structure during recursive runs
                 if not os.path.exists(os.path.join(newPath, os.path.dirname(os.path.relpath(target, self.rootDir)))):
                     os.mkdir(os.path.join(newPath, os.path.dirname(os.path.relpath(target, self.rootDir))))
                 newFile = os.path.join(newPath, os.path.relpath(target.replace('.flac', '.mp3'), self.rootDir))
 
             self.newFiles[target] = newFile
             print '\nConverting: ', target, ' : ', newFile
-            #uses flac to decode and pipe it's output into Lame
-            #TODO: allow for custom lame arguments
+
+            #uses flac to decode and pipe it's output into lame with the correct arguments
             psFlac = subprocess.Popen(('flac', '-d', '-c', target), stdout=subprocess.PIPE)
-            psLame = subprocess.call(
-                ('lame', '-V', '0', '-', newFile), stdin=psFlac.stdout)
+            if self.lameargs == None:
+                if self.cbr == None:
+                    psLame = subprocess.call(
+                        ('lame', '-', newFile) + ('-V', str(self.vbrlevel)), stdin=psFlac.stdout)
+                else:
+                    psLame = subprocess.call(
+                        ('lame', '-', newFile) + ('-b', str(self.cbr)), stdin=psFlac.stdout)
+            else:
+                psLame = subprocess.call(('lame', '-', newFile)+self.lameargs, stdin=psFlac.stdout)
             psFlac.wait()
             self.copyTags(target)
         return
 
     def copyTags(self, target):
-    #uses mutagen to duplicate valid tags from flac to MP3
+        """Uses mutagen to duplicate valid tags from flac to MP3"""
         flacMeta = FLAC(target)
         try:
             mp3Meta = EasyID3(self.newFiles[target])
@@ -110,7 +124,7 @@ class convertFlac:
             mp3Meta.add_tags()
 
         for key in flacMeta.keys():
-        #leveling tags cause errors on MP3 tags (too quiet on random tracks) so they are omited
+            #leveling tags cause errors on MP3 tags (too quiet on random tracks) so they are omited
             if key.startswith('replay'):
                 print 'skipping key:', key
             else:
@@ -121,6 +135,7 @@ class convertFlac:
         mp3Meta.save()
 
     def cloneFolder(self, source, dest):
+        """Handles The copying of additional non-flac files (ex: cover.jpg etc) from input to output folder."""
         if self.recursive:
             if os.path.exists(dest):
                 raise IOError('destination folder already exists, cannot copy recursivly')
@@ -129,7 +144,7 @@ class convertFlac:
         else:
             if not os.path.exists(dest):
                 os.mkdir(dest)
-                #list interpretation, simply compiles a list of all valid files in source directory
+            #list interpretation, simply compiles a list of all valid files in source directory.
             files = [os.path.join(source, f) for f in os.listdir(source) if os.path.isfile(os.path.join(source, f))]
             toBeCopied = []
             for file in files:
@@ -160,16 +175,27 @@ def main():
                      help="recurses through a directory looking for flac files to convert, often used in conjuntion"
                           " with '-c'. Maintains directory structure for converted files")
     parser.add_option_group(group)
-    (options, args) = parser.parse_args()
 
+    group = OptionGroup(parser, 'Custom Lame Settings',
+                        "Options for customizing the settings lame will use to convert the flac files. "
+                        "Defaults to V0.")
+    group.add_option('-V', dest='VBRLevel', metavar='n', action='store', type='int',
+                     help="Quick VBR setting (0-9), defaults to highest \"0\"")
+    group.add_option('-b', dest='CBR', metavar="bitrate", action='store', type='int',
+                     help="Quick bitrate setting in kbps (up to 320)")
+    group.add_option('--lameargs', dest='lameargs', metavar='\"[options]\"', action='store',
+                     help="Options that will be passed through to the lame encoder. Type \"lame -h\" to see lame options. "
+                          "Overides other lame settings. Be sure to encapsulate options with quotes ex:\"-p -V2 -a\"")
+    parser.add_option_group(group)
+
+    (options, args) = parser.parse_args()
     if len(args) < 1:
         parser.error("You must specify a path where '.flac' files can be found")
-
 
     #TODO: add support for multiple directories
     #TODO: add delete flacs option
 
-    convertFlac(args, newFolder=options.output, clone=options.clone, recursive=options.recursive)
+    convertFlac(args, newFolder=options.output, clone=options.clone, recursive=options.recursive, vbrlevel=options.VBRLevel, cbr=options.CBR, lameargs=options.lameargs)
 
     return
 
