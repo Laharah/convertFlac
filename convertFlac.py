@@ -97,8 +97,9 @@ class convertFlac:
             self.newFiles[target] = newFile
             print '\nConverting: ', target, ' : ', newFile
 
-            #uses flac to decode and pipe it's output into lame with the correct arguments
+            #uses flac to decode and pipe it's output into lame with the correct arguments.
             psFlac = subprocess.Popen(('flac', '-d', '-c', target), stdout=subprocess.PIPE)
+            #lame arguments heirarchy goes lame arguments passthrough > CBR > VBR.
             if self.lameargs == None:
                 if self.cbr == None:
                     psLame = subprocess.call(
