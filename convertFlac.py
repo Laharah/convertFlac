@@ -1,16 +1,53 @@
 #!/usr/bin/python
 
-____author__ = 'Lunchbox'
+"""
+Usage: convertFlac [options] [-o PATH] SOURCE ...
 
+accepts flec files or directorys, creating VO mp3 files from each flac.
+
+Options:
+  -h, --help             show this help message and exit
+
+  -o PATH, --output=PATH defines an output directory or file
+
+  Directory Options:
+    These options are used for determining behavior when being passed a
+    directory
+
+    -c, --clone         makes a clone of given directory, copying non-flac
+                        files and placing converted files in their correct
+                        place. if no output path is defined, 'SOURCEPATH
+                        [MP3]' will be used. Output directory must not already
+                        exsist. DOES NOT IMPLY '-r'.
+
+    -r, --recursive     recurses through a directory looking for flac files to
+                        convert, often used in conjuntion with '-c'. Maintains
+                        directory structure for converted files
+
+  Custom Lame Settings:
+    Options for customizing the settings lame will use to convert the flac
+    files. Defaults to V0.
+
+    -V n, --VBR n           Quick VBR setting (0-9), defaults to highest quality: 0
+
+    -b n, --bitrate n       Quick bitrate setting in kbps (up to 320).
+
+    --lameargs="[options]"  Options that will be passed through to the lame
+                            encoder. Type "lame -h" to see lame options. Overides
+                            other lame settings. Be sure to encapsulate options
+                            with quotes ex:"-p -V2 -a"
+"""
+____author__ = 'Laharah'
+
+import shutil
+import subprocess
+import os
+
+import docopt
 from mutagen import File as mutagenFile
 from mutagen.flac import FLAC
 from mutagen.easyid3 import EasyID3
 from mutagen.easyid3 import EasyID3KeyError
-from optparse import OptionParser
-from optparse import OptionGroup
-import shutil
-import subprocess
-import os
 
 
 class convertFlac:
@@ -182,77 +219,18 @@ class convertFlac:
 
 def main():
 
-    usage = 'usage: "%prog [options[--output=PATH]] SOURCE"'
-    progDescription = 'accepts flec files or directorys, creating VO mp3 files from each flac'
-    parser = OptionParser(usage, description=progDescription)
-    parser.add_option('-o', '--output',
-                      dest='output',
-                      metavar='PATH',
-                      action='store',
-                      help="defines an output directory or file")
-
-    group = OptionGroup(
-        parser, 'Directory Options',
-        'These options are used for determining behavior when being passed a directory ')
-    group.add_option(
-        '-c', '--clone',
-        dest="clone",
-        action='store_true',
-        default=False,
-        help=
-        "makes a clone of given directory, copying non-flac files and placing converted "
-        "files in their correct place. if no output path is defined, 'SOURCEPATH [MP3]' will be used."
-        " Output directory must not already exsist. DOES NOT IMPLY '-r'.")
-    group.add_option(
-        '-r', '--recursive',
-        dest='recursive',
-        action='store_true',
-        default=False,
-        help=
-        "recurses through a directory looking for flac files to convert, often used in conjuntion"
-        " with '-c'. Maintains directory structure for converted files")
-    parser.add_option_group(group)
-
-    group = OptionGroup(
-        parser, 'Custom Lame Settings',
-        "Options for customizing the settings lame will use to convert the flac files. "
-        "Defaults to V0.")
-    group.add_option('-V',
-                     dest='VBRLevel',
-                     metavar='n',
-                     action='store',
-                     type='int',
-                     help="Quick VBR setting (0-9), defaults to highest \"0\"")
-    group.add_option('-b',
-                     dest='CBR',
-                     metavar="bitrate",
-                     action='store',
-                     type='int',
-                     help="Quick bitrate setting in kbps (up to 320)")
-    group.add_option(
-        '--lameargs',
-        dest='lameargs',
-        metavar='\"[options]\"',
-        action='store',
-        help=
-        "Options that will be passed through to the lame encoder. Type \"lame -h\" to see lame options. "
-        "Overides other lame settings. Be sure to encapsulate options with quotes ex:\"-p -V2 -a\"")
-    parser.add_option_group(group)
-
-    (options, args) = parser.parse_args()
-    if len(args) < 1:
-        parser.error("You must specify a path where '.flac' files can be found")
+    arguments = docopt.docopt(__doc__)
 
     # TODO: add support for multiple directories
     # TODO: add delete flacs option
 
-    convertFlac(args,
-                newFolder=options.output,
-                clone=options.clone,
-                recursive=options.recursive,
-                vbrlevel=options.VBRLevel,
-                cbr=options.CBR,
-                lameargs=options.lameargs)
+    convertFlac(arguments['SOURCE'],
+                newFolder=arguments['--output'],
+                clone=arguments['--clone'],
+                recursive=arguments['--recursive'],
+                vbrlevel=arguments['--VBR'],
+                cbr=arguments['--bitrate'],
+                lameargs=arguments['--lameargs'])
 
     return
 

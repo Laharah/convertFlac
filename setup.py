@@ -12,7 +12,8 @@ setup(
     long_description='A simple script and class that uses subprocess to call flac and lame to convert flac files to mp3 and transfer tags',
     py_modules=['convertFlac'],
     install_requires=[
-        'mutagen > 1.0',
+        'mutagen >= 1.0',
+        'docopt >= 0.6' 
     ],
     entry_points={
         'console_scripts': [
