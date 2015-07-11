@@ -2,7 +2,7 @@
 """
 Usage: convertFlac [options] [-o PATH] SOURCE ...
 
-accepts flec files or directorys, creating VO mp3 files from each flac.
+accepts flec files or directories, creating VO mp3 files from each flac.
 
 Options:
   -h, --help             show this help message and exit
@@ -278,7 +278,7 @@ def main():
             recursive=arguments['--recursive'],
             vbrlevel=arguments['--VBR'],
             cbr=arguments['--bitrate'],
-            lame_args=arguments['--lameargs'],
+            lame_args=arguments['--lame-args'],
             overwrite=arguments['--overwrite'],
             delete_flacs=arguments['--delete-flacs'])
 

@@ -1,5 +1,5 @@
 #convertFlac
-###Covert flac files inelegantly to mp3 using flac and lame
+###Covert flac files intelligently to mp3 using FLAC and LAME
 
 ####Features:
 *   automatically copies flac metadata to id3 tags
@@ -23,7 +23,7 @@ Thats it!
 
     Usage: convertFlac [options] [-o PATH] SOURCE ...
     
-    accepts flec files or directorys, creating VO mp3 files from each flac.
+    accepts flac files or directories, creating VO mp3 files from each flac.
     
     Options:
       -h, --help             show this help message and exit
@@ -41,25 +41,25 @@ Thats it!
                             will be used. Output directory must not already
                             exsist. DOES NOT IMPLY '-r'.
     
-        -r, --recursive     recurses through a directory looking for flac files to
-                            convert. Often used in conjuntion with '-c' to maintain
+        -r, --recursive     recurses through directories looking for flac files to
+                            convert. Often used in conjunction with '-c' to maintain
                             directory structure for converted files
     
         --delete-flacs      delete input flacs after transcode. Cleans up empty directories
                             as well. (use without "-c" or "-o" to simulate an inplace
                             transcode).
     
-        -f, --overwrite     forces overwriting if files already exsist.
+        -f, --overwrite     forces overwriting if files already exist.
     
       Custom Lame Settings:
         Options for customizing the settings lame will use to convert the flac
         files. Defaults to V0.
     
-        -V n, --VBR n           Quick VBR setting (0-9), defaults to highest quality: 0
+        -V n, --VBR n            Quick VBR setting (0-9), defaults to highest quality: 0
     
-        -b n, --bitrate n       Quick bitrate setting in kbps (up to 320).
+        -b n, --bitrate n        Quick bitrate setting in kbps (up to 320).
     
-        --lameargs="[options]"  Options that will be passed through to the lame
-                                encoder. Type "lame -h" to see lame options. Overides
-                                other lame settings. Be sure to encapsulate options
-                                with quotes ex: "-p -V2 -a"
+        --lame-args="[options]"  Options that will be passed through to the lame
+                                 encoder. Type "lame -h" to see lame options. Overides
+                                 other lame settings. Be sure to encapsulate options
+                                 with quotes ex: "-p -V2 -a"
