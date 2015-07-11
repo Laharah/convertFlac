@@ -7,6 +7,8 @@ accepts flac files or directories, creating VO mp3 files from each flac.
 Options:
   -h, --help             show this help message and exit
 
+  --version              Display version info
+
   -o, --output=PATH      defines an output directory. If none is specified, mp3s will be
                          placed next to the original flacs
 
@@ -283,7 +285,7 @@ def clone_folder(source, dest, recursive=False):
 
 
 def main():
-    arguments = docopt.docopt(__doc__)
+    arguments = docopt.docopt(__doc__, version='1.03')
 
     try:
         ps = subprocess.call(('flac', '--version'))
