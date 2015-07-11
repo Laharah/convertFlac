@@ -177,7 +177,7 @@ def _do_convert(source, dest, vbr=0, cbr=None, lame_args=None, overwrite=False):
         os.makedirs(new_path)
 
     if os.path.exists(dest) and not overwrite:
-        warnings.warn('"{}" already exists! skipping...')
+        warnings.warn('"{}" already exists! skipping...'.format(dest))
         return None
 
     print '\nConverting: ', source, ' : ', dest
@@ -267,7 +267,8 @@ def main():
             recursive=arguments['--recursive'],
             vbrlevel=arguments['--VBR'],
             cbr=arguments['--bitrate'],
-            lame_args=arguments['--lameargs'])
+            lame_args=arguments['--lameargs'],
+            overwrite=arguments['--overwrite'])
 
     return
 

@@ -27,7 +27,7 @@ Thats it!
     Options:
       -h, --help             show this help message and exit
     
-      -o PATH, --output=PATH defines an output directory or file
+      -o PATH, --output=PATH defines an output directory
     
       Directory Options:
         These options are used for determining behavior when being passed a
@@ -42,6 +42,9 @@ Thats it!
         -r, --recursive     recurses through a directory looking for flac files to
                             convert, often used in conjuntion with '-c'. Maintains
                             directory structure for converted files
+    
+        -f, --overwrite     forces overwriting if files already exsist. Affects cloning as
+                            well.
     
       Custom Lame Settings:
         Options for customizing the settings lame will use to convert the flac

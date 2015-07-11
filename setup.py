@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='convertFlac',
-    version='1.1',
+    version='1.1.01',
     packages=[''],
     url='https://github.com/Laharah/convertFlac',
     license='GNU',
