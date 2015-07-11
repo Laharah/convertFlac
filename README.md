@@ -8,6 +8,7 @@
 *   optional recursion
 *   folder cloning (for copying over .cue, cover.jpg, etc and maintaing folder structure)
 *   quick encoding options
+*   options for inplace transcoding
 
 ####Installation:
 *   Install [flac](https://xiph.org/flac/download.html)
@@ -27,7 +28,8 @@ Thats it!
     Options:
       -h, --help             show this help message and exit
     
-      -o PATH, --output=PATH defines an output directory
+      -o, --output=PATH      defines an output directory. If none is specified, mp3s will be
+                             placed next to the original flacs
     
       Directory Options:
         These options are used for determining behavior when being passed a
@@ -35,16 +37,19 @@ Thats it!
     
         -c, --clone         makes a clone of given directory, copying non-flac
                             files and placing converted files in their correct
-                            place. if no output path is defined, 'SOURCEPATH
-                            [MP3]' will be used. Output directory must not already
+                            place. if no output path is defined, 'SOURCEPATH [MP3]'
+                            will be used. Output directory must not already
                             exsist. DOES NOT IMPLY '-r'.
     
         -r, --recursive     recurses through a directory looking for flac files to
-                            convert, often used in conjuntion with '-c'. Maintains
+                            convert. Often used in conjuntion with '-c' to maintain
                             directory structure for converted files
     
-        -f, --overwrite     forces overwriting if files already exsist. Affects cloning as
-                            well.
+        --delete-flacs      delete input flacs after transcode. Cleans up empty directories
+                            as well. (use without "-c" or "-o" to simulate an inplace
+                            transcode).
+    
+        -f, --overwrite     forces overwriting if files already exsist.
     
       Custom Lame Settings:
         Options for customizing the settings lame will use to convert the flac
@@ -57,5 +62,4 @@ Thats it!
         --lameargs="[options]"  Options that will be passed through to the lame
                                 encoder. Type "lame -h" to see lame options. Overides
                                 other lame settings. Be sure to encapsulate options
-                                with quotes ex:"-p -V2 -a"
-
+                                with quotes ex: "-p -V2 -a"
