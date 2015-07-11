@@ -1,11 +1,12 @@
 #convertFlac
-###Covert flac files easily to mp3 using flac and lame
+###Covert flac files inelegantly to mp3 using flac and lame
 
 ####Features:
 *   automatically copies flac metadata to id3 tags
-*   accepts list of files or directories *(one directory for now)*
+*   accepts list of files or directories
+*   semi-intelegent output directory parsing
 *   optional recursion
-*   folder cloning (for copying over .cue, cover.jpg, etc)
+*   folder cloning (for copying over .cue, cover.jpg, etc and maintaing folder structure)
 *   quick encoding options
 
 ####Installation:
