@@ -1,6 +1,6 @@
 #!/usr/bin/python
 """
-Usage: convertFlac [options] [-o PATH] SOURCE ...
+Usage: convertFlac [options] [-o PATH] <SOURCES> ...
 
 accepts flac files or directories, creating VO mp3 files from each flac.
 
@@ -286,7 +286,9 @@ def main():
         print 'Could not find lame.exe! please ensure it is installed and in your path.'
         exit(1)
 
-    convert(arguments['SOURCE'],
+    print arguments
+
+    convert(arguments['<SOURCES>'],
             output=arguments['--output'],
             clone=arguments['--clone'],
             recursive=arguments['--recursive'],
