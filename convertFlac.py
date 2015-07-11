@@ -24,6 +24,8 @@ Options:
                         convert. Often used in conjunction with '-c' to maintain
                         directory structure for converted files
 
+    --folder-suffix SF  A suffix to append to cloned folders. ex " [V0]"
+
     --delete-flacs      delete input flacs after transcode. Cleans up empty directories
                         as well. (use without "-c" or "-o" to simulate an inplace
                         transcode).
@@ -62,6 +64,7 @@ def convert(targets,
             output=None,
             recursive=False,
             clone=False,
+            folder_suffix=None,
             vbrlevel=0,
             cbr=None,
             lame_args=None,
@@ -74,7 +77,8 @@ def convert(targets,
     folders_to_clone, target_files = generate_outputs(
         targets, output,
         clone=clone,
-        recursive=recursive)
+        recursive=recursive,
+        folder_suffix=folder_suffix)
 
     for source, dest in folders_to_clone:
         clone_folder(source, dest, recursive=recursive)
@@ -100,7 +104,7 @@ def convert(targets,
                           'Skipping...'.format(source))
 
 
-def generate_outputs(targets, output, clone=False, recursive=False):
+def generate_outputs(targets, output, clone=False, recursive=False, folder_suffix=None):
     """
     Takes in a list of targets and generates tuples containing the apropriate
     source/destination for each folder to be cloned and flac file to be converted.
@@ -131,6 +135,7 @@ def generate_outputs(targets, output, clone=False, recursive=False):
     else:
         files = [(f, get_output_path(None, f)) for f in files]
 
+    folder_suffix = folder_suffix if folder_suffix else ''
     folder_targets = []
     for folder in folders:
         if output:
@@ -138,8 +143,13 @@ def generate_outputs(targets, output, clone=False, recursive=False):
                 output_folder = os.path.join(output, os.path.basename(folder))
             else:
                 output_folder = output
+            if folder_suffix:
+                output_folder += folder_suffix
         else:
-            output_folder = '{} [MP3]'.format(folder)
+            if folder_suffix:
+                output_folder = '{}{}'.format(folder, folder_suffix)
+            else:
+                output_folder = '{} [MP3]'.format(folder)
         folder_targets.append((folder, output_folder))
         additional_files = find_flacs(folder, recursive=recursive)
         preserve_from = None if not recursive else folder
@@ -290,6 +300,7 @@ def main():
             output=arguments['--output'],
             clone=arguments['--clone'],
             recursive=arguments['--recursive'],
+            folder_suffix=arguments['--folder-suffix'],
             vbrlevel=arguments['--VBR'],
             cbr=arguments['--bitrate'],
             lame_args=arguments['--lame-args'],

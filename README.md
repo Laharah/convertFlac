@@ -23,7 +23,7 @@
 Thats it!
 
 
-    Usage: convertFlac [options] [-o PATH] SOURCE ...
+    Usage: convertFlac [options] [-o PATH] <SOURCES> ...
     
     accepts flac files or directories, creating VO mp3 files from each flac.
     
@@ -46,6 +46,8 @@ Thats it!
         -r, --recursive     recurses through a directory looking for flac files to
                             convert. Often used in conjunction with '-c' to maintain
                             directory structure for converted files
+    
+        --folder-suffix SF  A suffix to append to cloned folders. ex " [V0]"
     
         --delete-flacs      delete input flacs after transcode. Cleans up empty directories
                             as well. (use without "-c" or "-o" to simulate an inplace
