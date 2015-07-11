@@ -1,5 +1,4 @@
 #!/usr/bin/python
-
 """
 Usage: convertFlac [options] [-o PATH] SOURCE ...
 
@@ -8,7 +7,7 @@ accepts flec files or directorys, creating VO mp3 files from each flac.
 Options:
   -h, --help             show this help message and exit
 
-  -o PATH, --output=PATH defines an output directory or file
+  -o PATH, --output=PATH defines an output directory
 
   Directory Options:
     These options are used for determining behavior when being passed a
@@ -48,6 +47,7 @@ import os
 import warnings
 
 import docopt
+from mutagen import MutagenError
 from mutagen import File as mutagenFile
 from mutagen.flac import FLAC
 from mutagen.easyid3 import EasyID3
@@ -60,27 +60,36 @@ def convert(targets,
             clone=False,
             vbrlevel=0,
             cbr=None,
-            lame_args=None):
+            lame_args=None,
+            overwrite=False):
+
     # lameargs need to be in tupple format for subprocess call
     lame_args = tuple(lame_args.split()) if lame_args else None
 
     folders_to_clone, target_files = generate_outputs(
-        targets, output, clone=clone, recursive=recursive)
+        targets, output,
+        clone=clone,
+        recursive=recursive)
 
     for source, dest in folders_to_clone:
-        clone_folder(source, dest)
+        clone_folder(source, dest, recursive=recursive)
 
     for source, dest in target_files:
         if target_is_valid(source):
-            doConvert(source, dest, vbr=vbrlevel, cbr=cbr, lame_args=lame_args)
-            copy_tags(source, dest)
+            new = _do_convert(source, dest,
+                              vbr=vbrlevel,
+                              cbr=cbr,
+                              lame_args=lame_args,
+                              overwrite=overwrite)
+            if new:
+                copy_tags(source, new)
         else:
             warnings.warn('The target "{}" could not be found. '
                           'Skipping...'.format(source))
 
 
 def generate_outputs(targets, output, clone=False, recursive=False):
-    '''
+    """
     Takes in a list of targets and generates tuples containing the apropriate
     source/destination for each folder to be cloned and flac file to be converted.
     :param targets: list of files and folders to search for flac files
@@ -90,8 +99,7 @@ def generate_outputs(targets, output, clone=False, recursive=False):
     and maintain file structure
     :param recursive: Whether or not to search directories recursivly
     :return:tuple in format ([(folder_source, folder_dest)...], [(flac_source, dest)])
-    '''
-
+    """
     is_iter = True if iter(targets) is iter(targets) else False
     folders = []
     files = []
@@ -100,7 +108,7 @@ def generate_outputs(targets, output, clone=False, recursive=False):
             if clone:
                 folders.append(os.path.abspath(target))
             else:
-                files += findFlacs(target, recursive=recursive)
+                files += find_flacs(target, recursive=recursive)
         else:
             files.append(os.path.abspath(target))
 
@@ -121,14 +129,16 @@ def generate_outputs(targets, output, clone=False, recursive=False):
         else:
             output_folder = '{} [MP3]'.format(folder)
         folder_targets.append((folder, output_folder))
-        additional_files = findFlacs(folder, recursive=recursive)
+        additional_files = find_flacs(folder, recursive=recursive)
         preserve_from = None if not recursive else folder
-        files += [(f, get_output_path(output_folder, f, preserve_from)) for f in additional_files]
+        files += [(f, get_output_path(output_folder, f, preserve_from))
+                  for f in additional_files]
 
     return folder_targets, files
 
 
 def get_output_path(output, file_path, preserve_from=None):
+    """helper function to convert a target filepath into the correct output"""
     output = output if output else os.path.dirname(file_path)
     f_name, _, _ = file_path.rpartition('.flac')
     if preserve_from is not None and preserve_from not in file_path:
@@ -146,87 +156,77 @@ def target_is_valid(target):
         return target.endswith('.flac')
 
 
-# Finds all flacs to convert, optionaly recursivly using os.path.walk
-def findFlacs(dir, recursive):
-    if recursive == True:
-        allFiles = []
-        for root, dirs, files in os.walk(dir):
-            for file in files:
-                allFiles.append(os.path.join(root, file))
+def find_flacs(folder, recursive):
+    if recursive:
+        all_files = []
+        for root, dirs, files in os.walk(folder):
+            for f in files:
+                all_files.append(os.path.join(root, f))
 
-        flacs = [os.path.abspath(f) for f in allFiles if f.endswith('.flac')]
+        flacs = [os.path.abspath(f) for f in all_files if f.endswith('.flac')]
         return flacs
     else:
-        return [os.path.abspath(os.path.join(dir, f)) for f in os.listdir(unicode(dir))
-                if f.endswith('.flac')]
+        return [os.path.abspath(os.path.join(folder, f))
+                for f in os.listdir(unicode(folder)) if f.endswith('.flac')]
 
 
-def doConvert(self):
+def _do_convert(source, dest, vbr=0, cbr=None, lame_args=None, overwrite=False):
     """Convert flacs to mp3 V0 using lame and Copies tags from flac to new MP3."""
-    newPath = self.newFolder
-    if not os.path.exists(newPath):
-        os.mkdir(newPath)
+    new_path = os.path.dirname(dest)
+    if not os.path.exists(new_path):
+        os.makedirs(new_path)
 
-    for target in self.flacFiles:
-        # Forms file destination arguments.
-        newFile = os.path.join(newPath, os.path.basename(target.replace('.flac',
-                                                                        '.mp3')))
+    if os.path.exists(dest) and not overwrite:
+        warnings.warn('"{}" already exists! skipping...')
+        return None
 
-        if self.recursive:
-            # special handeling for destination arguments to maintain folder
-            # structure during recursive runs
-            if not os.path.exists(os.path.join(
-                    newPath, os.path.dirname(os.path.relpath(target, self.rootDir)))):
-                os.mkdir(os.path.join(
-                    newPath, os.path.dirname(os.path.relpath(target, self.rootDir))))
-            newFile = os.path.join(newPath, os.path.relpath(
-                target.replace('.flac', '.mp3'), self.rootDir))
+    print '\nConverting: ', source, ' : ', dest
 
-        self.newFiles[target] = newFile
-        print '\nConverting: ', target, ' : ', newFile
-
-        # uses flac to decode and pipe it's output into lame with the correct
-        # arguments.
-        psFlac = subprocess.Popen(('flac', '-d', '-c', target),
-                                  stdout=subprocess.PIPE)
-        # lame arguments heirarchy goes lame arguments passthrough > CBR > VBR.
-        if self.lameargs == None:
-            if self.cbr == None:
-                psLame = subprocess.call(
-                    ('lame', '-', newFile) + ('-V', str(self.vbrlevel)),
-                    stdin=psFlac.stdout)
-            else:
-                psLame = subprocess.call(
-                    ('lame', '-', newFile) + ('-b', str(self.cbr)),
-                    stdin=psFlac.stdout)
+    # uses flac to decode and pipe it's output into lame with the correct
+    # arguments.
+    ps_flac = subprocess.Popen(('flac', '-d', '-c', source), stdout=subprocess.PIPE)
+    # lame arguments heirarchy goes lame arguments passthrough > CBR > VBR.
+    if lame_args is None:
+        if cbr is None:
+            ps_lame = subprocess.call(
+                ('lame', '-', dest) + ('-V', str(vbr)),
+                stdin=ps_flac.stdout)
         else:
-            psLame = subprocess.call(('lame', '-', newFile) + self.lameargs,
-                                     stdin=psFlac.stdout)
-        psFlac.wait()
-    return
+            ps_lame = subprocess.call(
+                ('lame', '-', dest) + ('-b', str(cbr)),
+                stdin=ps_flac.stdout)
+    else:
+        ps_lame = subprocess.call(('lame', '-', dest) + lame_args, stdin=ps_flac.stdout)
+    ps_flac.wait()
+    return dest
 
 
-def copy_tags(self, target):
+def copy_tags(source, target):
     """Uses mutagen to duplicate valid tags from flac to MP3"""
-    flacMeta = FLAC(target)
     try:
-        mp3Meta = EasyID3(self.newFiles[target])
-        print mp3Meta
-    except:
-        print 'adding id3 header to', self.newFiles[target]
-        mp3Meta = mutagenFile(self.newFiles[target], easy=True)
-        mp3Meta.add_tags()
+        flac_meta = FLAC(source)
+    except MutagenError:
+        warnings.warn('Bad metadata on "{}", skipping metadata copy...'.format(source))
+        return
 
-    for key in flacMeta.keys():
-        # leveling tags cause errors on MP3 tags (too quiet on random tracks) so they are omited
+    try:
+        mp3_meta = EasyID3(target)
+        print mp3_meta
+    except MutagenError:
+        print 'adding id3 header to', target
+        mp3_meta = mutagenFile(target, easy=True)
+        mp3_meta.add_tags()
+
+    for key in flac_meta.keys():
+        # leveling tags causes errors (too quiet on random tracks) so they are omitted
         if key.startswith('replay'):
             print 'skipping key:', key
         else:
             try:
-                mp3Meta[key] = flacMeta[key]
+                mp3_meta[key] = flac_meta[key]
             except EasyID3KeyError:
                 print 'could not add key: ', key
-    mp3Meta.save()
+    mp3_meta.save()
 
 
 def clone_folder(source, dest, recursive=False):
@@ -242,34 +242,32 @@ def clone_folder(source, dest, recursive=False):
     else:
         if not os.path.exists(dest):
             os.mkdir(dest)
-        # list interpretation, simply compiles a list of all valid files in source directory.
         files = [os.path.join(source, f) for f in os.listdir(source)
                  if os.path.isfile(os.path.join(source, f))]
-        toBeCopied = []
-        for file in files:
-            if file.endswith('.flac'):
+        to_copy = []
+        for f in files:
+            if f.endswith('.flac'):
                 pass
             else:
-                toBeCopied.append(file)
+                to_copy.append(f)
 
-        for file in toBeCopied:
-            shutil.copy(file, dest)
-        return toBeCopied
+        for f in to_copy:
+            shutil.copy(f, dest)
+        return to_copy
 
 
 def main():
     arguments = docopt.docopt(__doc__)
 
-    # TODO: add support for multiple directories
     # TODO: add delete flacs option
 
-    convertFlac(arguments['SOURCE'],
-                newFolder=arguments['--output'],
-                clone=arguments['--clone'],
-                recursive=arguments['--recursive'],
-                vbrlevel=arguments['--VBR'],
-                cbr=arguments['--bitrate'],
-                lameargs=arguments['--lameargs'])
+    convert(arguments['SOURCE'],
+            output=arguments['--output'],
+            clone=arguments['--clone'],
+            recursive=arguments['--recursive'],
+            vbrlevel=arguments['--VBR'],
+            cbr=arguments['--bitrate'],
+            lame_args=arguments['--lameargs'])
 
     return
 
