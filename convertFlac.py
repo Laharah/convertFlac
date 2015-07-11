@@ -286,8 +286,6 @@ def main():
         print 'Could not find lame.exe! please ensure it is installed and in your path.'
         exit(1)
 
-    print arguments
-
     convert(arguments['<SOURCES>'],
             output=arguments['--output'],
             clone=arguments['--clone'],
