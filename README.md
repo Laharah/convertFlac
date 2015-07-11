@@ -1,10 +1,11 @@
 #convertFlac
 ###Covert flac files intelligently to mp3 using FLAC and LAME
+*python 2.7*
 
 ####Features:
 *   automatically copies flac metadata to id3 tags
 *   accepts list of files or directories
-*   semi-intelegent output directory parsing
+*   semi-intelligent output directory parsing
 *   optional recursion
 *   folder cloning (for copying over .cue, cover.jpg, etc and maintaing folder structure)
 *   quick encoding options
@@ -13,10 +14,11 @@
 ####Installation:
 *   Install [flac](https://xiph.org/flac/download.html)
 *   Install lame (binaries [here](http://lame.sourceforge.net/links.php#Binaries))
-*   Make sure both executables are in your path
-*   type `python setup.py install`
+*   Make sure both executables are in your path (eg: typing `flac --version` works)
+*   type `python setup.py install` 
+*   or if you have pip: type `pip install git+git://github.com/laharah/convertFlac`
 
-*(For OS X I recomend using [Homebrew](http://brew.sh) to install lame and flac)*
+*(For OS X I recommend using [Homebrew](http://brew.sh) to install LAME and FLAC)*
 
 Thats it!
 
@@ -35,13 +37,13 @@ Thats it!
         These options are used for determining behavior when being passed a
         directory
     
-        -c, --clone         makes a clone of given directory, copying non-flac
+        -c, --clone         makes a clone of given directories, copying non-flac
                             files and placing converted files in their correct
                             place. if no output path is defined, 'SOURCEPATH [MP3]'
                             will be used. Output directory must not already
-                            exsist. DOES NOT IMPLY '-r'.
+                            exist. DOES NOT IMPLY '-r'.
     
-        -r, --recursive     recurses through directories looking for flac files to
+        -r, --recursive     recurses through a directory looking for flac files to
                             convert. Often used in conjunction with '-c' to maintain
                             directory structure for converted files
     
@@ -57,9 +59,9 @@ Thats it!
     
         -V n, --VBR n            Quick VBR setting (0-9), defaults to highest quality: 0
     
-        -b n, --bitrate n        Quick bitrate setting in kbps (up to 320).
+        -b n, --bitrate n        Quick constant bitrate setting in kbps (up to 320).
     
         --lame-args="[options]"  Options that will be passed through to the lame
-                                 encoder. Type "lame -h" to see lame options. Overides
+                                 encoder. Type "lame -h" to see lame options. Overrides
                                  other lame settings. Be sure to encapsulate options
                                  with quotes ex: "-p -V2 -a"

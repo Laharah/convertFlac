@@ -2,7 +2,7 @@
 """
 Usage: convertFlac [options] [-o PATH] SOURCE ...
 
-accepts flec files or directories, creating VO mp3 files from each flac.
+accepts flac files or directories, creating VO mp3 files from each flac.
 
 Options:
   -h, --help             show this help message and exit
@@ -14,34 +14,34 @@ Options:
     These options are used for determining behavior when being passed a
     directory
 
-    -c, --clone         makes a clone of given directory, copying non-flac
+    -c, --clone         makes a clone of given directories, copying non-flac
                         files and placing converted files in their correct
                         place. if no output path is defined, 'SOURCEPATH [MP3]'
                         will be used. Output directory must not already
-                        exsist. DOES NOT IMPLY '-r'.
+                        exist. DOES NOT IMPLY '-r'.
 
     -r, --recursive     recurses through a directory looking for flac files to
-                        convert. Often used in conjuntion with '-c' to maintain
+                        convert. Often used in conjunction with '-c' to maintain
                         directory structure for converted files
 
     --delete-flacs      delete input flacs after transcode. Cleans up empty directories
                         as well. (use without "-c" or "-o" to simulate an inplace
                         transcode).
 
-    -f, --overwrite     forces overwriting if files already exsist.
+    -f, --overwrite     forces overwriting if files already exist.
 
   Custom Lame Settings:
     Options for customizing the settings lame will use to convert the flac
     files. Defaults to V0.
 
-    -V n, --VBR n           Quick VBR setting (0-9), defaults to highest quality: 0
+    -V n, --VBR n            Quick VBR setting (0-9), defaults to highest quality: 0
 
-    -b n, --bitrate n       Quick bitrate setting in kbps (up to 320).
+    -b n, --bitrate n        Quick constant bitrate setting in kbps (up to 320).
 
-    --lameargs="[options]"  Options that will be passed through to the lame
-                            encoder. Type "lame -h" to see lame options. Overides
-                            other lame settings. Be sure to encapsulate options
-                            with quotes ex: "-p -V2 -a"
+    --lame-args="[options]"  Options that will be passed through to the lame
+                             encoder. Type "lame -h" to see lame options. Overrides
+                             other lame settings. Be sure to encapsulate options
+                             with quotes ex: "-p -V2 -a"
 """
 ____author__ = 'Laharah'
 
@@ -197,7 +197,10 @@ def _do_convert(source, dest, vbr=0, cbr=None, lame_args=None, overwrite=False):
     # uses flac to decode and pipe it's output into lame with the correct
     # arguments.
     flac_args = ('flac', '-d', '-c')
-    ps_flac = subprocess.Popen(flac_args + (source, ), stdout=subprocess.PIPE)
+    try:
+        ps_flac = subprocess.Popen(flac_args + (source, ), stdout=subprocess.PIPE)
+    except OSError:
+        raise OSError("FLAC executible is not installed or not in path!")
     # lame arguments heirarchy goes lame arguments passthrough > CBR > VBR.
     if lame_args is None:
         if cbr is None:
@@ -271,6 +274,17 @@ def clone_folder(source, dest, recursive=False):
 
 def main():
     arguments = docopt.docopt(__doc__)
+
+    try:
+        ps = subprocess.call(('flac', '--version'))
+    except OSError:
+        print 'Could not find flac.exe! please ensure it is installed and in your path.'
+        exit(1)
+    try:
+        ps = subprocess.call(('lame', '--version'))
+    except OSError:
+        print 'Could not find lame.exe! please ensure it is installed and in your path.'
+        exit(1)
 
     convert(arguments['SOURCE'],
             output=arguments['--output'],
