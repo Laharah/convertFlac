@@ -67,7 +67,7 @@ def convert(targets,
             recursive=False,
             clone=False,
             folder_suffix=None,
-            vbrlevel=0,
+            vbr_level=0,
             cbr=None,
             lame_args=None,
             overwrite=False,
@@ -81,8 +81,8 @@ def convert(targets,
     :param recursive: search folders recursively for .flac files.
     :param clone: "clone" input folders, copying any additional files to output
     :param folder_suffix: suffix to add to cloned folders
-    :param vbrlevel: vbr level to pass to lame. Defaults to highest (0).
-    :param cbr: constant bitrate to use for mp3 encoding (overrides vbrlevel)
+    :param vbr_level: vbr level to pass to lame. Defaults to highest (0).
+    :param cbr: constant bitrate to use for mp3 encoding (overrides vbr_level)
     :param lame_args: custom lame args to pass for encoding. (Overrides all other
     lame args).
     :param overwrite: Overwrite existing files.
@@ -105,7 +105,7 @@ def convert(targets,
     for source, dest in target_files:
         if target_is_valid(source):
             new = _do_convert(source, dest,
-                              vbr=vbrlevel,
+                              vbr=vbr_level,
                               cbr=cbr,
                               lame_args=lame_args,
                               overwrite=overwrite)
@@ -319,7 +319,7 @@ def main():
             clone=arguments['--clone'],
             recursive=arguments['--recursive'],
             folder_suffix=arguments['--folder-suffix'],
-            vbrlevel=arguments['--VBR'],
+            vbr_level=arguments['--VBR'],
             cbr=arguments['--bitrate'],
             lame_args=arguments['--lame-args'],
             overwrite=arguments['--overwrite'],
