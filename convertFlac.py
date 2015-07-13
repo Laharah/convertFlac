@@ -49,9 +49,9 @@ Options:
 """
 ____author__ = 'Laharah'
 
+import os
 import shutil
 import subprocess
-import os
 import warnings
 
 import docopt
@@ -72,9 +72,23 @@ def convert(targets,
             lame_args=None,
             overwrite=False,
             delete_flacs=False):
-
-    # lameargs need to be in tupple format for subprocess call
-    lame_args = tuple(lame_args.split()) if lame_args else None
+    """
+    Convert given target files/folders into mp3 using flac and lame
+    :param targets: list of files or folders containing .flac files
+    :param output: folder to place outputs. If none is given, mp3s will be placeed
+    next to original flac files. (cloned folders without output will be placed next to
+    original folder with folder_suffix appended)
+    :param recursive: search folders recursively for .flac files.
+    :param clone: "clone" input folders, copying any additional files to output
+    :param folder_suffix: suffix to add to cloned folders
+    :param vbrlevel: vbr level to pass to lame. Defaults to highest (0).
+    :param cbr: constant bitrate to use for mp3 encoding (overrides vbrlevel)
+    :param lame_args: custom lame args to pass for encoding. (Overrides all other
+    lame args).
+    :param overwrite: Overwrite existing files.
+    :param delete_flacs: delete original flac files after conversion.
+    :return: None
+    """
 
     folders_to_clone, target_files = generate_outputs(
         targets, output,
@@ -84,6 +98,9 @@ def convert(targets,
 
     for source, dest in folders_to_clone:
         clone_folder(source, dest, recursive=recursive)
+
+    # lame_args need to be in tuple format for subprocess call
+    lame_args = tuple(lame_args.split()) if lame_args else None
 
     for source, dest in target_files:
         if target_is_valid(source):
@@ -102,7 +119,7 @@ def convert(targets,
                     pass
 
         else:
-            warnings.warn('The target "{}" could not be found. '
+            warnings.warn('The target "{}" could not be found or is not a ".flac" file. '
                           'Skipping...'.format(source))
 
 
@@ -239,7 +256,6 @@ def copy_tags(source, target):
 
     try:
         mp3_meta = EasyID3(target)
-        print mp3_meta
     except MutagenError:
         print 'adding id3 header to', target
         mp3_meta = mutagenFile(target, easy=True)
