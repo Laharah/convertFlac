@@ -50,6 +50,7 @@ Options:
 ____author__ = 'Laharah'
 
 import os
+from multiprocessing.pool import ThreadPool, cpu_count
 import shutil
 import subprocess
 import warnings
@@ -101,25 +102,37 @@ def convert(targets,
     # lame_args need to be in tuple format for subprocess call
     lame_args = tuple(lame_args.split()) if lame_args else None
 
-    for source, dest in target_files:
-        if target_is_valid(source):
-            new = _do_convert(source, dest,
-                              vbr=vbr_level,
-                              cbr=cbr,
-                              lame_args=lame_args,
-                              overwrite=overwrite)
-            if new:
-                copy_tags(source, new)
-            if delete_flacs:
-                os.remove(source)
-                try:
-                    os.rmdir(os.path.dirname(source))
-                except OSError:
-                    pass
+    def conversion_callback(result):
+        old, new = result
+        if not new:
+            print 'error converting {}'.format(old)
+            return
+        copy_tags(old, new)
+        if delete_flacs:
+            os.remove(old)
+            try:
+                os.rmdir(os.path.dirname(source))
+            except OSError:
+                pass
 
-        else:
+    pool = ThreadPool(4)
+
+    kwargs = {
+        'vbr': vbr_level,
+        'cbr': cbr,
+        'lame_args': lame_args,
+        'overwrite': overwrite
+    }
+
+    for source, dest in target_files:
+        if not target_is_valid(source):
             warnings.warn('The target "{}" could not be found or is not a ".flac" file. '
                           'Skipping...'.format(source))
+        pool.apply_async(_do_convert, args=(source, dest), kwds=kwargs,
+                         callback=conversion_callback)
+    pool.close()
+    pool.join()
+
 
 
 def generate_outputs(targets, output, clone=False, recursive=False, folder_suffix=None):
@@ -218,31 +231,41 @@ def _do_convert(source, dest, vbr=0, cbr=None, lame_args=None, overwrite=False):
 
     if os.path.exists(dest) and not overwrite:
         warnings.warn('"{}" already exists! skipping...'.format(dest))
-        return None
+        return source, None
 
     print '\nConverting: ', source, ' : ', dest
 
     # uses flac to decode and pipe it's output into lame with the correct
     # arguments.
     flac_args = ('flac', '-d', '-c')
-    try:
-        ps_flac = subprocess.Popen(flac_args + (source, ), stdout=subprocess.PIPE)
-    except OSError:
-        raise OSError("FLAC executible is not installed or not in path!")
+    with open(os.devnull) as devnull:
+        try:
+            ps_flac = subprocess.Popen(flac_args + (source, ), stdout=subprocess.PIPE,
+                                       stderr=devnull)
+        except OSError:
+            raise OSError("FLAC executible is not installed or not in path!")
     # lame arguments heirarchy goes lame arguments passthrough > CBR > VBR.
-    if lame_args is None:
-        if cbr is None:
-            ps_lame = subprocess.call(
-                ('lame', '-', dest) + ('-V', str(vbr)),
-                stdin=ps_flac.stdout)
+
+        if lame_args is None:
+            if cbr is None:
+                ps_lame = subprocess.call(
+                    ('lame', '-', dest) + ('-V', str(vbr)),
+                    stdin=ps_flac.stdout,
+                    stdout=devnull,
+                    stderr=devnull)
+            else:
+                ps_lame = subprocess.call(
+                    ('lame', '-', dest) + ('-b', str(cbr)),
+                    stdin=ps_flac.stdout,
+                    stderr=devnull,
+                    stdout=devnull)
         else:
-            ps_lame = subprocess.call(
-                ('lame', '-', dest) + ('-b', str(cbr)),
-                stdin=ps_flac.stdout)
-    else:
-        ps_lame = subprocess.call(('lame', '-', dest) + lame_args, stdin=ps_flac.stdout)
+            ps_lame = subprocess.call(('lame', '-', dest) + lame_args,
+                                      stdin=ps_flac.stdout,
+                                      stderr=devnull,
+                                      stdout=devnull)
     ps_flac.wait()
-    return dest
+    return source, dest
 
 
 def copy_tags(source, target):
