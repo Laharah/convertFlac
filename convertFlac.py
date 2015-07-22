@@ -109,9 +109,13 @@ def convert(targets,
     def conversion_callback(result):
         old, new = result
         if not new:
-            print 'error converting {}'.format(old)
+            warnings.warn('error converting {}'.format(old))
             return
+        if __name__ == '__main__':
+            print 'Done Converting {}\nCopying tags...'.format(old)
         copy_tags(old, new)
+        if __name__ == '__main__':
+            print 'Done!\n'
         if delete_flacs:
             os.remove(old)
             try:
@@ -246,7 +250,7 @@ def _do_convert(source, dest, vbr=0, cbr=None, lame_args=None, overwrite=False):
         warnings.warn('"{}" already exists! skipping...'.format(dest))
         return source, None
 
-    print '\nConverting: ', source, ' : ', dest
+    # print '\nConverting: ', source, ' : ', dest
 
     # uses flac to decode and pipe it's output into lame with the correct
     # arguments.
@@ -292,19 +296,21 @@ def copy_tags(source, target):
     try:
         mp3_meta = EasyID3(target)
     except MutagenError:
-        print 'adding id3 header to', target
+        # print 'adding id3 header to', target
         mp3_meta = mutagenFile(target, easy=True)
         mp3_meta.add_tags()
 
     for key in flac_meta.keys():
         # leveling tags causes errors (too quiet on random tracks) so they are omitted
         if key.startswith('replay'):
-            print 'skipping key:', key
+            pass
+            # print 'skipping key:', key
         else:
             try:
                 mp3_meta[key] = flac_meta[key]
             except EasyID3KeyError:
-                print 'could not add key: ', key
+                pass
+                # print 'could not add key: ', key
     mp3_meta.save()
 
 
