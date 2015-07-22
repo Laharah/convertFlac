@@ -12,6 +12,9 @@ Options:
   -o, --output=PATH      defines an output directory. If none is specified, mp3s will be
                          placed next to the original flacs
 
+  --num-cores            defines the number of processing cores to use for concurrent
+                         conversions. Defaults to using all available cores
+
   Directory Options:
     These options are used for determining behavior when being passed a
     directory
@@ -71,7 +74,8 @@ def convert(targets,
             cbr=None,
             lame_args=None,
             overwrite=False,
-            delete_flacs=False):
+            delete_flacs=False,
+            num_cores=0):
     """
     Convert given target files/folders into mp3 using flac and lame
     :param targets: list of files or folders containing .flac files
@@ -115,7 +119,16 @@ def convert(targets,
             except OSError:
                 pass
 
-    pool = ThreadPool(4)
+    if num_cores >= 1:  # Use half cores because flac and lame will run seperately
+        num_cores //= 2
+
+    if not num_cores:
+        if cpu_count() == 1:
+            num_cores = 1
+        else:
+            num_cores = cpu_count() // 2
+
+    pool = ThreadPool(num_cores)
 
     kwargs = {
         'vbr': vbr_level,
@@ -347,7 +360,8 @@ def main():
             cbr=arguments['--bitrate'],
             lame_args=arguments['--lame-args'],
             overwrite=arguments['--overwrite'],
-            delete_flacs=arguments['--delete-flacs'])
+            delete_flacs=arguments['--delete-flacs'],
+            num_cores=arguments['--num-cores'])
 
     return
 
