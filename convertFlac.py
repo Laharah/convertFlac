@@ -75,7 +75,7 @@ def convert(targets,
             lame_args=None,
             overwrite=False,
             delete_flacs=False,
-            num_cores=0,
+            num_cores=None,
             verbose=False):
     """
     Convert given target files/folders into mp3 using flac and lame
@@ -124,14 +124,10 @@ def convert(targets,
             except OSError:
                 pass
 
-    if num_cores > 1:  # Use half cores because flac and lame will run seperately
-        num_cores //= 2
+    num_cores = 0 if not num_cores else int(num_cores)
 
     if not num_cores:
-        if cpu_count() == 1:
-            num_cores = 1
-        else:
-            num_cores = cpu_count() // 2
+        num_cores = cpu_count()
 
     pool = ThreadPool(num_cores)
 
@@ -371,7 +367,7 @@ def main():
             lame_args=arguments['--lame-args'],
             overwrite=arguments['--overwrite'],
             delete_flacs=arguments['--delete-flacs'],
-            num_cores=int(arguments['--num-cores']),
+            num_cores=arguments['--num-cores'],
             verbose=True)
 
     return
