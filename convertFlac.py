@@ -12,7 +12,7 @@ Options:
   -o, --output=PATH      defines an output directory. If none is specified, mp3s will be
                          placed next to the original flacs
 
-  --num-cores            defines the number of processing cores to use for concurrent
+  --num-cores=N          defines the number of processing cores to use for concurrent
                          conversions. Defaults to using all available cores
 
   Directory Options:
@@ -113,8 +113,8 @@ def convert(targets,
             warnings.warn('error converting {}'.format(old))
             return
         if verbose:
-            print 'Done Converting {}\nCopying tags...'.format(old)
-        copy_tags(old, new)
+            print 'Conversion done for {}\nCopying tags...'.format(old)
+        copy_tags(old, new, verbose=True)
         if verbose:
             print 'Done!\n'
         if delete_flacs:
@@ -124,7 +124,7 @@ def convert(targets,
             except OSError:
                 pass
 
-    if num_cores >= 1:  # Use half cores because flac and lame will run seperately
+    if num_cores > 1:  # Use half cores because flac and lame will run seperately
         num_cores //= 2
 
     if not num_cores:
@@ -288,7 +288,7 @@ def _do_convert(source, dest, vbr=0, cbr=None, lame_args=None, overwrite=False):
     return source, dest
 
 
-def copy_tags(source, target):
+def copy_tags(source, target, verbose=False):
     """Uses mutagen to duplicate valid tags from flac to MP3"""
     try:
         flac_meta = FLAC(source)
@@ -299,21 +299,22 @@ def copy_tags(source, target):
     try:
         mp3_meta = EasyID3(target)
     except MutagenError:
-        # print 'adding id3 header to', target
+        if verbose:
+            print 'adding id3 header to mp3...'
         mp3_meta = mutagenFile(target, easy=True)
         mp3_meta.add_tags()
 
     for key in flac_meta.keys():
         # leveling tags causes errors (too quiet on random tracks) so they are omitted
         if key.startswith('replay'):
-            pass
-            # print 'skipping key:', key
+            if verbose:
+                print 'skipping leveling key:', key
         else:
             try:
                 mp3_meta[key] = flac_meta[key]
             except EasyID3KeyError:
-                pass
-                # print 'could not add key: ', key
+                if verbose:
+                    print 'could not add key: ', key
     mp3_meta.save()
 
 
@@ -370,7 +371,7 @@ def main():
             lame_args=arguments['--lame-args'],
             overwrite=arguments['--overwrite'],
             delete_flacs=arguments['--delete-flacs'],
-            num_cores=arguments['--num-cores'],
+            num_cores=int(arguments['--num-cores']),
             verbose=True)
 
     return
