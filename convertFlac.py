@@ -75,7 +75,8 @@ def convert(targets,
             lame_args=None,
             overwrite=False,
             delete_flacs=False,
-            num_cores=0):
+            num_cores=0,
+            verbose=False):
     """
     Convert given target files/folders into mp3 using flac and lame
     :param targets: list of files or folders containing .flac files
@@ -111,10 +112,10 @@ def convert(targets,
         if not new:
             warnings.warn('error converting {}'.format(old))
             return
-        if __name__ == '__main__':
+        if verbose:
             print 'Done Converting {}\nCopying tags...'.format(old)
         copy_tags(old, new)
-        if __name__ == '__main__':
+        if verbose:
             print 'Done!\n'
         if delete_flacs:
             os.remove(old)
@@ -369,7 +370,8 @@ def main():
             lame_args=arguments['--lame-args'],
             overwrite=arguments['--overwrite'],
             delete_flacs=arguments['--delete-flacs'],
-            num_cores=arguments['--num-cores'])
+            num_cores=arguments['--num-cores'],
+            verbose=True)
 
     return
 
