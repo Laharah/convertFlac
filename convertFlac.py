@@ -13,7 +13,8 @@ Options:
                          placed next to the original flacs
 
   --num-cores=N          defines the number of processing cores to use for concurrent
-                         conversions. Defaults to using all available cores
+                         conversions. Defaults to using half of available cores. Also
+                         accepts 'MAX' as an argument to use all availabe cores.
 
   Directory Options:
     These options are used for determining behavior when being passed a
@@ -127,7 +128,7 @@ def convert(targets,
     num_cores = 0 if not num_cores else int(num_cores)
 
     if not num_cores:
-        num_cores = cpu_count()
+        num_cores = cpu_count() // 2
 
     pool = ThreadPool(num_cores)
 
@@ -356,6 +357,10 @@ def main():
     except OSError:
         print 'Could not find lame.exe! please ensure it is installed and in your path.'
         exit(1)
+
+    if arguments['--num-cores'] is not None:
+        if arguments['--num-cores'].lower() == 'max':
+            arguments['--num-cores'] = cpu_count()
 
     convert(arguments['<SOURCES>'],
             output=arguments['--output'],
