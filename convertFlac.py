@@ -54,7 +54,6 @@ import shutil
 import subprocess
 import warnings
 
-import docopt
 from mutagen import MutagenError
 from mutagen import File as mutagenFile
 from mutagen.flac import FLAC
@@ -301,6 +300,8 @@ def clone_folder(source, dest, recursive=False):
 
 
 def main():
+    import docopt
+
     arguments = docopt.docopt(__doc__, version='1.03')
 
     try:
