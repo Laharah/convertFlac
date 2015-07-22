@@ -145,11 +145,12 @@ def convert(targets,
         if not target_is_valid(source):
             warnings.warn('The target "{}" could not be found or is not a ".flac" file. '
                           'Skipping...'.format(source))
-        pool.apply_async(_do_convert, args=(source, dest), kwds=kwargs,
+        pool.apply_async(_do_convert,
+                         args=(source, dest),
+                         kwds=kwargs,
                          callback=conversion_callback)
     pool.close()
     pool.join()
-
 
 
 def generate_outputs(targets, output, clone=False, recursive=False, folder_suffix=None):
@@ -257,7 +258,8 @@ def _do_convert(source, dest, vbr=0, cbr=None, lame_args=None, overwrite=False):
     flac_args = ('flac', '-d', '-c')
     with open(os.devnull) as devnull:
         try:
-            ps_flac = subprocess.Popen(flac_args + (source, ), stdout=subprocess.PIPE,
+            ps_flac = subprocess.Popen(flac_args + (source, ),
+                                       stdout=subprocess.PIPE,
                                        stderr=devnull)
         except OSError:
             raise OSError("FLAC executible is not installed or not in path!")
