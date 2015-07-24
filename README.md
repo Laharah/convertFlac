@@ -1,6 +1,6 @@
 #convertFlac
 ###Covert flac files intelligently to mp3 using FLAC and LAME
-*python 2.7*
+*python 2.7+, and python 3.3+*
 
 ####Features:
 *   automatically copies flac metadata to id3 tags
@@ -12,6 +12,11 @@
 *   quick encoding options
 *   options for inplace transcoding
 *   Windows utf-8 error workarounds!
+
+###Requirements:
+*   docopt >= 0.6 
+*   futures >= 2.2 (py 2.7)
+*   mutagen >= 1.0
 
 ####Installation:
 *   Install [flac](https://xiph.org/flac/download.html)
