@@ -103,8 +103,7 @@ def convert(targets,
     output = output.decode('utf8') if output else output
 
     folders_to_clone, target_files = generate_outputs(
-        [t.decode('utf8') for t in targets],
-        output,
+        [t.decode('utf8') for t in targets], output,
         clone=clone,
         recursive=recursive,
         folder_suffix=folder_suffix)
@@ -118,13 +117,18 @@ def convert(targets,
     def conversion_callback(result):
         old, new = result
         if not new:
-            warnings.warn('error converting {}'.format(old))
+            warnings.warn(u'error converting {}'.format(old))
             return
         if verbose:
-            print 'Conversion done for {}\nCopying tags...'.format(old)
+            try:
+                print u'Conversion done for {}\nCopying tags...'.format(old)
+            except UnicodeEncodeError:
+                print u'Conversion Done for ???.flac\nCopying tags...'
+
         copy_tags(old, new, verbose=True)
         if verbose:
-            print 'Done!\n'
+            print u'Done!\n'
+
         if delete_flacs:
             os.remove(old)
             try:
@@ -148,8 +152,10 @@ def convert(targets,
 
     for source, dest in target_files:
         if not target_is_valid(source):
-            warnings.warn('The target "{}" could not be found or is not a ".flac" file. '
-                          'Skipping...'.format(source))
+            warnings.warn(
+                (u'The target "{}" could not be found or is not a ".flac" file. '
+                 u'Skipping...').format(
+                     source))
         pool.apply_async(_do_convert,
                          args=(source, dest),
                          kwds=kwargs,
@@ -239,42 +245,39 @@ def find_flacs(folder, recursive):
             for f in files:
                 all_files.append(os.path.join(root, f))
 
-        flacs = [os.path.abspath(f) for f in all_files if f.endswith(
-            '.flac')]
+        flacs = [os.path.abspath(f) for f in all_files if f.endswith('.flac')]
         return flacs
     else:
-        return [os.path.abspath(os.path.join(folder, f))
-                for f in os.listdir(folder) if f.endswith('.flac')]
+        return [os.path.abspath(os.path.join(folder, f)) for f in os.listdir(folder)
+                if f.endswith('.flac')]
 
 
 @contextlib.contextmanager
 def temp_names(source, dest):
     '''context manager to temporarally change the names to non-unicode'''
-    new_source = source.replace(os.path.basename(source), '__temp__convert__flac.flac')
-    new_dest = dest.replace(os.path.basename(dest), '__temp__convert__flac.mp3')
+    new_source = source.replace(os.path.basename(source), u'{}.flac'.format(hash(source)))
+    new_dest = dest.replace(os.path.basename(dest), u'{}.mp3'.format(hash(dest)))
     os.rename(source, new_source)
     yield new_source, new_dest
     os.rename(new_source, source)
     os.rename(new_dest, dest)
 
 
-
-
-def win_crazy(func):
+def win_crazy(conversion):
     if sys.version_info.major == 3 or sys.platform != 'win32':
-        return func
+        return conversion
 
-    @functools.wraps
+    @functools.wraps(conversion)
     def win_convert(input, output, **kwargs):
         try:
             if any(isinstance(arg, unicode) for arg in (input, output)):
                 [x.decode('mbcs') for x in (input, output)]
-        except UnicodeDecodeError:
+        except UnicodeEncodeError:
             with temp_names(input, output) as (source, dest):
-                old, new = _do_convert(source, dest, **kwargs)
+                old, new = conversion(source, dest, **kwargs)
             return input, output if new else None
         else:
-            return _do_convert(input, output, **kwargs)
+            return conversion(input, output, **kwargs)
 
     return win_convert
 
@@ -287,7 +290,7 @@ def _do_convert(source, dest, vbr=0, cbr=None, lame_args=None, overwrite=False):
         os.makedirs(new_path)
 
     if os.path.exists(dest) and not overwrite:
-        warnings.warn('"{}" already exists! skipping...'.format(dest))
+        warnings.warn(u'"{}" already exists! skipping...'.format(dest))
         return source, None
 
     # print '\nConverting: ', source, ' : ', dest
@@ -331,7 +334,7 @@ def copy_tags(source, target, verbose=False):
     try:
         flac_meta = FLAC(source)
     except MutagenError:
-        warnings.warn('Bad metadata on "{}", skipping metadata copy...'.format(source))
+        warnings.warn(u'Bad metadata on "{}", skipping metadata copy...'.format(source))
         return
 
     try:
@@ -361,7 +364,7 @@ def clone_folder(source, dest, recursive=False):
     input to output folder."""
     if recursive:
         if os.path.exists(dest):
-            raise IOError('destination folder "{}" already exists, cannot copy '
+            raise IOError(u'destination folder "{}" already exists, cannot copy '
                           'recursivly'.format(dest))
 
         shutil.copytree(source, dest, ignore=shutil.ignore_patterns('*.flac'))
