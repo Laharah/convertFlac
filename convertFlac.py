@@ -51,10 +51,14 @@ Options:
                              other lame settings. Be sure to encapsulate options
                              with quotes ex: "-p -V2 -a"
 """
+
 ____author__ = 'Laharah'
 
+import contextlib
+import functools
 import os
 from multiprocessing.pool import ThreadPool, cpu_count
+import sys
 import shutil
 import subprocess
 import warnings
@@ -232,13 +236,46 @@ def find_flacs(folder, recursive):
             for f in files:
                 all_files.append(os.path.join(root, f))
 
-        flacs = [os.path.abspath(f) for f in all_files if f.endswith('.flac')]
+        flacs = [os.path.abspath(f).decode('utf-8') for f in all_files if f.endswith(
+            '.flac')]
         return flacs
     else:
         return [os.path.abspath(os.path.join(folder, f))
                 for f in os.listdir(unicode(folder)) if f.endswith('.flac')]
 
+@contextlib.contextmanager
+def temp_names(source, dest):
+    '''context manager to temporarally change the names to non-unicode'''
+    new_source = source.replace(os.path.basename(source), '__temp__convert__flac.flac')
+    new_dest = dest.replace(os.path.basename(dest), '__temp__convert__flac.mp3')
+    os.rename(source, new_source)
+    yield new_source, new_dest
+    os.rename(new_source, source)
+    os.rename(new_dest, dest)
 
+
+
+
+def win_crazy(func):
+    if sys.version_info.major == 3 or sys.platform != 'win32':
+        return func
+
+    @functools.wraps
+    def win_convert(input, output, **kwargs):
+        try:
+            if any(isinstance(arg, unicode) for arg in (input, output)):
+                [x.decode('mbcs') for x in (input, output)]
+        except UnicodeDecodeError:
+            with temp_names(input, output) as (source, dest):
+                old, new = _do_convert(source, dest, **kwargs)
+            return input, output if new else None
+        else:
+            return _do_convert(input, output, **kwargs)
+
+    return win_convert
+
+
+@win_crazy
 def _do_convert(source, dest, vbr=0, cbr=None, lame_args=None, overwrite=False):
     """Convert flacs to mp3 V0 using lame and Copies tags from flac to new MP3."""
     new_path = os.path.dirname(dest)
