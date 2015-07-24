@@ -146,7 +146,6 @@ def convert(targets,
     if not num_cores:
         num_cores = cpu_count() // 2
 
-    pool = ThreadPool(num_cores)
 
     kwargs = {
         'vbr': vbr_level,
@@ -155,6 +154,7 @@ def convert(targets,
         'overwrite': overwrite
     }
 
+    pool = ThreadPool(num_cores)
     for source, dest in target_files:
         if not target_is_valid(source):
             warnings.warn(
@@ -272,9 +272,10 @@ def non_uni_files(source, dest):
     shutil.rmtree(tempdir)
 
 
-def win_crazy(conversion):
+def win_popen_workaround(conversion):
     """
-    special handling of un-decodeable utf-8 strings for py2 on windows machines.
+    decorator for special handling of un-decodeable utf-8 strings for py2 on windows
+    machines.
 
     This decorator workaround is necessary because of a bug in the subprocess module
     in python 2 on windows machines.
@@ -298,7 +299,7 @@ def win_crazy(conversion):
     return win_convert
 
 
-@win_crazy
+@win_popen_workaround
 def _do_convert(source, dest, vbr=0, cbr=None, lame_args=None, overwrite=False):
     """Convert flacs to mp3 V0 using lame and Copies tags from flac to new MP3."""
     new_path = os.path.dirname(dest)
@@ -321,7 +322,7 @@ def _do_convert(source, dest, vbr=0, cbr=None, lame_args=None, overwrite=False):
                                        stderr=devnull)
         except OSError:
             raise OSError("FLAC executible is not installed or not in path!")
-    # lame arguments heirarchy goes lame arguments passthrough > CBR > VBR.
+    # lame arguments hierarchy goes lameargs > CBR > VBR.
 
         if lame_args is None:
             if cbr is None:
@@ -405,7 +406,7 @@ def clone_folder(source, dest, recursive=False):
 def main():
     import docopt
 
-    arguments = docopt.docopt(__doc__, version='1.03')
+    arguments = docopt.docopt(__doc__, version='1.04.6')
 
     try:
         ps = subprocess.call(('flac', '--version'))
