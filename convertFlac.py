@@ -100,8 +100,11 @@ def convert(targets,
     :return: None
     """
 
+    output = output.decode('utf8') if output else output
+
     folders_to_clone, target_files = generate_outputs(
-        targets, output,
+        (t.decode('utf8') for t in targets),
+        output,
         clone=clone,
         recursive=recursive,
         folder_suffix=folder_suffix)
@@ -232,7 +235,7 @@ def target_is_valid(target):
 def find_flacs(folder, recursive):
     if recursive:
         all_files = []
-        for root, dirs, files in os.walk(unicode(folder)):
+        for root, dirs, files in os.walk(folder):
             for f in files:
                 all_files.append(os.path.join(root, f))
 
@@ -241,7 +244,7 @@ def find_flacs(folder, recursive):
         return flacs
     else:
         return [os.path.abspath(os.path.join(folder, f))
-                for f in os.listdir(unicode(folder)) if f.endswith('.flac')]
+                for f in os.listdir(folder) if f.endswith('.flac')]
 
 
 @contextlib.contextmanager
