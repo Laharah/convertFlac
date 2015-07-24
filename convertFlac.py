@@ -53,8 +53,9 @@ Options:
 """
 from __future__ import unicode_literals, print_function
 
-____author__ = 'Laharah'
+__author__ = 'Laharah'
 
+from concurrent.futures import ThreadPoolExecutor
 import contextlib
 import functools
 import os
@@ -121,8 +122,8 @@ def convert(targets,
     # lame_args need to be in tuple format for subprocess call
     lame_args = tuple(lame_args.split()) if lame_args else None
 
-    def conversion_callback(result):
-        old, new = result
+    def conversion_callback(future):
+        old, new = future.result()
         if not new:
             warnings.warn('error converting {}'.format(old))
             return
@@ -130,7 +131,9 @@ def convert(targets,
             try:
                 print('Conversion done for {}\nCopying tags...'.format(old))
             except UnicodeEncodeError:
-                print('Conversion Done for ???.flac\nCopying tags...')
+                print(
+                    'Conversion Done for {}\nCopying tags...'.format(old.encode(
+                        'mbcs', 'replace')))
 
         copy_tags(old, new, verbose=True)
         if verbose:
@@ -148,7 +151,6 @@ def convert(targets,
     if not num_cores:
         num_cores = cpu_count() // 2
 
-
     kwargs = {
         'vbr': vbr_level,
         'cbr': cbr,
@@ -156,19 +158,14 @@ def convert(targets,
         'overwrite': overwrite
     }
 
-    pool = ThreadPool(num_cores)
-    for source, dest in target_files:
-        if not target_is_valid(source):
-            warnings.warn(
-                ('The target "{}" could not be found or is not a ".flac" file. '
-                 'Skipping...').format(
-                     source))
-        pool.apply_async(_do_convert,
-                         args=(source, dest),
-                         kwds=kwargs,
-                         callback=conversion_callback)
-    pool.close()
-    pool.join()
+    with ThreadPoolExecutor(max_workers=num_cores) as pool:
+        for source, dest in target_files:
+            if not target_is_valid(source):
+                warnings.warn(
+                    ('The target "{}" could not be found or is not a ".flac" file. '
+                     'Skipping...').format(source))
+            pool.submit(_do_convert, source, dest,
+                        **kwargs).add_done_callback(conversion_callback)
 
 
 def generate_outputs(targets, output, clone=False, recursive=False, folder_suffix=None):
