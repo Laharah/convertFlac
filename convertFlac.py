@@ -103,7 +103,7 @@ def convert(targets,
     output = output.decode('utf8') if output else output
 
     folders_to_clone, target_files = generate_outputs(
-        (t.decode('utf8') for t in targets),
+        [t.decode('utf8') for t in targets],
         output,
         clone=clone,
         recursive=recursive,
