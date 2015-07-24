@@ -61,6 +61,7 @@ from multiprocessing.pool import ThreadPool, cpu_count
 import sys
 import shutil
 import subprocess
+import tempfile
 import warnings
 
 from mutagen import MutagenError
@@ -257,14 +258,18 @@ def find_flacs(folder, recursive):
 
 
 @contextlib.contextmanager
-def temp_names(source, dest):
-    """context manager to temporarally change the names to non-unicode"""
-    new_source = source.replace(os.path.basename(source), u'{}.flac'.format(hash(source)))
-    new_dest = dest.replace(os.path.basename(dest), u'{}.mp3'.format(hash(dest)))
-    os.rename(source, new_source)
-    yield new_source, new_dest
-    os.rename(new_source, source)
-    os.rename(new_dest, dest)
+def non_uni_files(source, dest):
+    """context manager to copy files into non-unicode namespace, copy the new dest to
+    the correct place and cleanup afterward"""
+    tempdir = tempfile.mkdtemp()
+    temp_source = os.path.join(tempdir, '{}.flac'.format(hash(source)))
+    temp_dest = os.path.join(tempdir, '{}.mp3'.format(hash(dest)))
+    shutil.copy2(source, temp_source)
+    yield (temp_source, temp_dest)
+
+    if os.path.exists(temp_dest):
+        shutil.copy2(temp_dest, dest)
+    shutil.rmtree(tempdir)
 
 
 def win_crazy(conversion):
@@ -284,7 +289,7 @@ def win_crazy(conversion):
             if any(isinstance(arg, unicode) for arg in (input, output)):
                 [x.decode('mbcs') for x in (input, output)]
         except UnicodeEncodeError:
-            with temp_names(input, output) as (source, dest):
+            with non_uni_files(input, output) as (source, dest):
                 old, new = conversion(source, dest, **kwargs)
             return input, output if new else None
         else:
