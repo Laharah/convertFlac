@@ -232,16 +232,17 @@ def target_is_valid(target):
 def find_flacs(folder, recursive):
     if recursive:
         all_files = []
-        for root, dirs, files in os.walk(folder):
+        for root, dirs, files in os.walk(unicode(folder)):
             for f in files:
                 all_files.append(os.path.join(root, f))
 
-        flacs = [os.path.abspath(f).decode('utf-8') for f in all_files if f.endswith(
+        flacs = [os.path.abspath(f) for f in all_files if f.endswith(
             '.flac')]
         return flacs
     else:
         return [os.path.abspath(os.path.join(folder, f))
                 for f in os.listdir(unicode(folder)) if f.endswith('.flac')]
+
 
 @contextlib.contextmanager
 def temp_names(source, dest):
