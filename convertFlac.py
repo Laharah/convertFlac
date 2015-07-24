@@ -254,7 +254,7 @@ def find_flacs(folder, recursive):
 
 @contextlib.contextmanager
 def temp_names(source, dest):
-    '''context manager to temporarally change the names to non-unicode'''
+    """context manager to temporarally change the names to non-unicode"""
     new_source = source.replace(os.path.basename(source), u'{}.flac'.format(hash(source)))
     new_dest = dest.replace(os.path.basename(dest), u'{}.mp3'.format(hash(dest)))
     os.rename(source, new_source)
@@ -264,6 +264,13 @@ def temp_names(source, dest):
 
 
 def win_crazy(conversion):
+    """
+    special handling of un-decodeable utf-8 strings for py2 on windows machines.
+
+    This decorator workaround is necessary because of a bug in the subprocess module
+    in python 2 on windows machines.
+    """
+
     if sys.version_info.major == 3 or sys.platform != 'win32':
         return conversion
 

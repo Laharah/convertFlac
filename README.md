@@ -11,6 +11,7 @@
 *   folder cloning (for copying over .cue, cover.jpg, etc and maintaing folder structure)
 *   quick encoding options
 *   options for inplace transcoding
+*   Windows utf-8 error workarounds!
 
 ####Installation:
 *   Install [flac](https://xiph.org/flac/download.html)
@@ -24,6 +25,7 @@
 Thats it!
 
 
+    """
     Usage: convertFlac [options] [-o PATH] <SOURCES> ...
 
     accepts flac files or directories, creating VO mp3 files from each flac.
@@ -36,8 +38,9 @@ Thats it!
       -o, --output=PATH      defines an output directory. If none is specified, mp3s will be
                              placed next to the original flacs
 
-      --num-cores            defines the number of processing cores to use for concurrent
-                             conversions. Defaults to using all available cores
+      --num-cores=N          defines the number of processing cores to use for concurrent
+                             conversions. Defaults to using half of available cores. Also
+                             accepts 'MAX' as an argument to use all availabe cores.
 
       Directory Options:
         These options are used for determining behavior when being passed a
@@ -73,3 +76,4 @@ Thats it!
                                  encoder. Type "lame -h" to see lame options. Overrides
                                  other lame settings. Be sure to encapsulate options
                                  with quotes ex: "-p -V2 -a"
+    """
