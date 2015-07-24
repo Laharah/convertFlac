@@ -101,9 +101,13 @@ def convert(targets,
     """
 
     output = output.decode('utf8') if output else output
+    if iter(targets) is iter(targets):
+        targets = (t.decode('utf8') for t in targets)
+    else:
+        targets = {t.decode('utf8') for t in targets}
 
     folders_to_clone, target_files = generate_outputs(
-        [t.decode('utf8') for t in targets], output,
+        targets, output,
         clone=clone,
         recursive=recursive,
         folder_suffix=folder_suffix)
