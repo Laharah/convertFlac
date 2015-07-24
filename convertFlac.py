@@ -198,9 +198,9 @@ def generate_outputs(targets, output, clone=False, recursive=False, folder_suffi
                 output_folder += folder_suffix
         else:
             if folder_suffix:
-                output_folder = '{}{}'.format(folder, folder_suffix)
+                output_folder = u'{}{}'.format(folder, folder_suffix)
             else:
-                output_folder = '{} [MP3]'.format(folder)
+                output_folder = u'{} [MP3]'.format(folder)
         folder_targets.append((folder, output_folder))
         additional_files = find_flacs(folder, recursive=recursive)
         preserve_from = None if not recursive else folder
@@ -215,11 +215,11 @@ def get_output_path(output, file_path, preserve_from=None):
     output = output if output else os.path.dirname(file_path)
     f_name, _, _ = file_path.rpartition('.flac')
     if preserve_from is not None and preserve_from not in file_path:
-        raise ValueError('"{}" is not in the file path "{}". Cannot preserve recursive '
+        raise ValueError(u'"{}" is not in the file path "{}". Cannot preserve recursive '
                          'folder structure'.format(preserve_from, file_path))
     new_base = preserve_from if preserve_from else os.path.dirname(file_path)
     f_name = f_name.replace(new_base, output)
-    return '{}.mp3'.format(f_name)
+    return u'{}.mp3'.format(f_name)
 
 
 def target_is_valid(target):
