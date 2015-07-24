@@ -51,13 +51,14 @@ Options:
                              other lame settings. Be sure to encapsulate options
                              with quotes ex: "-p -V2 -a"
 """
+from __future__ import unicode_literals, print_function
 
 ____author__ = 'Laharah'
 
 import contextlib
 import functools
 import os
-from multiprocessing.pool import ThreadPool, cpu_count
+from multiprocessing import cpu_count
 import sys
 import shutil
 import subprocess
@@ -101,11 +102,12 @@ def convert(targets,
     :return: None
     """
 
-    output = output.decode('utf8') if output else output
+    output = output.decode('utf8') if isinstance(output, bytes) else output
+
     if iter(targets) is iter(targets):
-        targets = (t.decode('utf8') for t in targets)
+        targets = (t.decode('utf8') if isinstance(t, bytes) else t for t in targets)
     else:
-        targets = {t.decode('utf8') for t in targets}
+        targets = {t.decode('utf8') if isinstance(t, bytes) else t for t in targets}
 
     folders_to_clone, target_files = generate_outputs(
         targets, output,
@@ -122,17 +124,17 @@ def convert(targets,
     def conversion_callback(result):
         old, new = result
         if not new:
-            warnings.warn(u'error converting {}'.format(old))
+            warnings.warn('error converting {}'.format(old))
             return
         if verbose:
             try:
-                print u'Conversion done for {}\nCopying tags...'.format(old)
+                print('Conversion done for {}\nCopying tags...'.format(old))
             except UnicodeEncodeError:
-                print u'Conversion Done for ???.flac\nCopying tags...'
+                print('Conversion Done for ???.flac\nCopying tags...')
 
         copy_tags(old, new, verbose=True)
         if verbose:
-            print u'Done!\n'
+            print('Done!\n')
 
         if delete_flacs:
             os.remove(old)
@@ -158,8 +160,8 @@ def convert(targets,
     for source, dest in target_files:
         if not target_is_valid(source):
             warnings.warn(
-                (u'The target "{}" could not be found or is not a ".flac" file. '
-                 u'Skipping...').format(
+                ('The target "{}" could not be found or is not a ".flac" file. '
+                 'Skipping...').format(
                      source))
         pool.apply_async(_do_convert,
                          args=(source, dest),
@@ -212,9 +214,9 @@ def generate_outputs(targets, output, clone=False, recursive=False, folder_suffi
                 output_folder += folder_suffix
         else:
             if folder_suffix:
-                output_folder = u'{}{}'.format(folder, folder_suffix)
+                output_folder = '{}{}'.format(folder, folder_suffix)
             else:
-                output_folder = u'{} [MP3]'.format(folder)
+                output_folder = '{} [MP3]'.format(folder)
         folder_targets.append((folder, output_folder))
         additional_files = find_flacs(folder, recursive=recursive)
         preserve_from = None if not recursive else folder
@@ -229,11 +231,11 @@ def get_output_path(output, file_path, preserve_from=None):
     output = output if output else os.path.dirname(file_path)
     f_name, _, _ = file_path.rpartition('.flac')
     if preserve_from is not None and preserve_from not in file_path:
-        raise ValueError(u'"{}" is not in the file path "{}". Cannot preserve recursive '
+        raise ValueError('"{}" is not in the file path "{}". Cannot preserve recursive '
                          'folder structure'.format(preserve_from, file_path))
     new_base = preserve_from if preserve_from else os.path.dirname(file_path)
     f_name = f_name.replace(new_base, output)
-    return u'{}.mp3'.format(f_name)
+    return '{}.mp3'.format(f_name)
 
 
 def target_is_valid(target):
@@ -307,10 +309,10 @@ def _do_convert(source, dest, vbr=0, cbr=None, lame_args=None, overwrite=False):
         os.makedirs(new_path)
 
     if os.path.exists(dest) and not overwrite:
-        warnings.warn(u'"{}" already exists! skipping...'.format(dest))
+        warnings.warn('"{}" already exists! skipping...'.format(dest))
         return source, None
 
-    # print '\nConverting: ', source, ' : ', dest
+    # print('\nConverting: ', source, ' : ', dest)
 
     # uses flac to decode and pipe it's output into lame with the correct
     # arguments.
@@ -351,14 +353,14 @@ def copy_tags(source, target, verbose=False):
     try:
         flac_meta = FLAC(source)
     except MutagenError:
-        warnings.warn(u'Bad metadata on "{}", skipping metadata copy...'.format(source))
+        warnings.warn('Bad metadata on "{}", skipping metadata copy...'.format(source))
         return
 
     try:
         mp3_meta = EasyID3(target)
     except MutagenError:
         if verbose:
-            print 'adding id3 header to mp3...'
+            print('adding id3 header to mp3...')
         mp3_meta = mutagenFile(target, easy=True)
         mp3_meta.add_tags()
 
@@ -366,13 +368,13 @@ def copy_tags(source, target, verbose=False):
         # leveling tags causes errors (too quiet on random tracks) so they are omitted
         if key.startswith('replay'):
             if verbose:
-                print 'skipping leveling key:', key
+                print('skipping leveling key:', key)
         else:
             try:
                 mp3_meta[key] = flac_meta[key]
             except EasyID3KeyError:
                 if verbose:
-                    print 'could not add key: ', key
+                    print('could not add key: ', key)
     mp3_meta.save()
 
 
@@ -381,7 +383,7 @@ def clone_folder(source, dest, recursive=False):
     input to output folder."""
     if recursive:
         if os.path.exists(dest):
-            raise IOError(u'destination folder "{}" already exists, cannot copy '
+            raise IOError('destination folder "{}" already exists, cannot copy '
                           'recursivly'.format(dest))
 
         shutil.copytree(source, dest, ignore=shutil.ignore_patterns('*.flac'))
@@ -411,12 +413,12 @@ def main():
     try:
         ps = subprocess.call(('flac', '--version'))
     except OSError:
-        print 'Could not find flac.exe! please ensure it is installed and in your path.'
+        print('Could not find flac.exe! please ensure it is installed and in your path.')
         exit(1)
     try:
         ps = subprocess.call(('lame', '--version'))
     except OSError:
-        print 'Could not find lame.exe! please ensure it is installed and in your path.'
+        print('Could not find lame.exe! please ensure it is installed and in your path.')
         exit(1)
 
     if arguments['--num-cores'] is not None:
