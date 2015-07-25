@@ -405,7 +405,7 @@ def clone_folder(source, dest, recursive=False):
 def main():
     import docopt
 
-    arguments = docopt.docopt(__doc__, version='1.05.0')
+    arguments = docopt.docopt(__doc__, version='1.05.01')
 
     try:
         ps = subprocess.call(('flac', '--version'))
