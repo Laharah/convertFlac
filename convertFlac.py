@@ -236,10 +236,13 @@ def get_output_path(output, file_path, preserve_from=None):
 
 
 def target_is_valid(target):
+    """checks if a file exists and has '.flac' extension"""
     if not os.path.exists(target):
         return False
     if os.path.isfile(target):
         return target.endswith('.flac')
+    else:
+        return False
 
 
 def find_flacs(folder, recursive):
@@ -409,7 +412,7 @@ def clone_folder(source, dest, recursive=False):
 def main():
     import docopt
 
-    arguments = docopt.docopt(__doc__, version='1.05.01')
+    arguments = docopt.docopt(__doc__, version='1.05.03')
 
     try:
         ps = subprocess.call(('flac', '--version'))
