@@ -264,11 +264,15 @@ def non_uni_files(source, dest):
     temp_source = os.path.join(tempdir, '{}.flac'.format(hash(source)))
     temp_dest = os.path.join(tempdir, '{}.mp3'.format(hash(dest)))
     shutil.copy2(source, temp_source)
-    yield (temp_source, temp_dest)
-
-    if os.path.exists(temp_dest):
-        shutil.copy2(temp_dest, dest)
-    shutil.rmtree(tempdir)
+    try:
+        yield (temp_source, temp_dest)
+    except:
+        raise
+    else:
+        if os.path.exists(temp_dest):
+            shutil.copy2(temp_dest, dest)
+    finally:
+        shutil.rmtree(tempdir)
 
 
 def win_popen_workaround(conversion):
