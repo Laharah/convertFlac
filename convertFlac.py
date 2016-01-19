@@ -32,6 +32,9 @@ Options:
 
     --folder-suffix SF  A suffix to append to cloned folders. ex " [V0]"
 
+    --replace PAT       A sed type regex substitution string to be run on each
+                        directory and file name (remember to escape regex control chars.)
+
     --delete-flacs      delete input flacs after transcode. Cleans up empty directories
                         as well. (use without "-c" or "-o" to simulate an inplace
                         transcode).
@@ -60,6 +63,7 @@ import contextlib
 import functools
 import os
 from multiprocessing import cpu_count
+import re
 import sys
 import shutil
 import subprocess
@@ -84,6 +88,7 @@ def convert(targets,
             overwrite=False,
             delete_flacs=False,
             num_cores=None,
+            replacement=None,
             verbose=False):
     """
     Convert given target files/folders into mp3 using flac and lame
@@ -110,11 +115,22 @@ def convert(targets,
     else:
         targets = {t.decode('utf8') if isinstance(t, bytes) else t for t in targets}
 
+    if replacement:
+        if not replacement.startswith('s'):
+            raise ValueError('replacement string must start with "s[SEPERATOR_CHAR]"')
+        sep = replacement[1]
+        if replacement.count(sep) != 3:
+            raise ValueError("replacement string must be in sed format. eg:'s/pat/repl/"
+                             " (no flags)'")
+        replacement = tuple(replacement.split(sep)[1:3])
+
+
     folders_to_clone, target_files = generate_outputs(
         targets, output,
         clone=clone,
         recursive=recursive,
-        folder_suffix=folder_suffix)
+        folder_suffix=folder_suffix,
+        sub=replacement)
 
     for source, dest in folders_to_clone:
         clone_folder(source, dest, recursive=recursive)
@@ -168,7 +184,8 @@ def convert(targets,
                         **kwargs).add_done_callback(conversion_callback)
 
 
-def generate_outputs(targets, output, clone=False, recursive=False, folder_suffix=None):
+def generate_outputs(targets, output, clone=False, recursive=False, folder_suffix=None,
+                     sub=None):
     """
     Takes in a list of targets and generates tuples containing the apropriate
     source/destination for each folder to be cloned and flac file to be converted.
@@ -195,9 +212,9 @@ def generate_outputs(targets, output, clone=False, recursive=False, folder_suffi
     output = os.path.abspath(output) if output else None
 
     if output:
-        files = [(f, get_output_path(output, f)) for f in files]
+        files = [(f, get_output_path(output, f, sub=sub)) for f in files]
     else:
-        files = [(f, get_output_path(None, f)) for f in files]
+        files = [(f, get_output_path(None, f, sub=sub)) for f in files]
 
     folder_suffix = folder_suffix if folder_suffix else ''
     folder_targets = []
@@ -207,23 +224,38 @@ def generate_outputs(targets, output, clone=False, recursive=False, folder_suffi
                 output_folder = os.path.join(output, os.path.basename(folder))
             else:
                 output_folder = output
+            if sub:
+                pat, repl = sub
+                output_folder = re.sub(pat, repl, output_folder)
             if folder_suffix:
                 output_folder += folder_suffix
         else:
-            if folder_suffix:
-                output_folder = '{}{}'.format(folder, folder_suffix)
+            folder_name_modified = False
+            if sub:
+                pat, repl = sub
+                output_folder = re.sub(pat, repl, folder)
+                if output_folder != folder:
+                    folder_name_modified = True
             else:
+                output_folder = folder
+
+            if folder_suffix:
+                output_folder = '{}{}'.format(output_folder, folder_suffix)
+                folder_name_modified = True
+
+            if not folder_name_modified:  # output folder must not be same as folder
                 output_folder = '{} [MP3]'.format(folder)
+
         folder_targets.append((folder, output_folder))
         additional_files = find_flacs(folder, recursive=recursive)
         preserve_from = None if not recursive else folder
-        files += [(f, get_output_path(output_folder, f, preserve_from))
+        files += [(f, get_output_path(output_folder, f, preserve_from, sub))
                   for f in additional_files]
 
     return folder_targets, files
 
 
-def get_output_path(output, file_path, preserve_from=None):
+def get_output_path(output, file_path, preserve_from=None, sub=None):
     """helper function to convert a target filepath into the correct output"""
     output = output if output else os.path.dirname(file_path)
     f_name, _, _ = file_path.rpartition('.flac')
@@ -232,6 +264,10 @@ def get_output_path(output, file_path, preserve_from=None):
                          'folder structure'.format(preserve_from, file_path))
     new_base = preserve_from if preserve_from else os.path.dirname(file_path)
     f_name = f_name.replace(new_base, output)
+    if sub:
+        pat, repl = sub
+        f_name = os.path.join(os.path.dirname(f_name),
+                              re.sub(pat, repl, os.path.basename(f_name)))
     return '{}.mp3'.format(f_name)
 
 
@@ -440,6 +476,7 @@ def main():
             overwrite=arguments['--overwrite'],
             delete_flacs=arguments['--delete-flacs'],
             num_cores=arguments['--num-cores'],
+            replacement=arguments['--replace'],
             verbose=True)
 
     return
