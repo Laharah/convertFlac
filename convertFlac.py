@@ -368,8 +368,9 @@ def _do_convert(source, dest, vbr=0, cbr=None, lame_args=None, overwrite=False):
 
         if lame_args is None:
             if cbr is None:
+                args = ['lame', '-', dest, '-V', str(vbr)]
                 ps_lame = subprocess.call(
-                    ('lame', '-', dest) + ('-V', str(vbr)),
+                    args,
                     stdin=ps_flac.stdout,
                     stdout=devnull,
                     stderr=devnull)
@@ -464,6 +465,9 @@ def main():
     if arguments['--num-cores'] is not None:
         if arguments['--num-cores'].lower() == 'max':
             arguments['--num-cores'] = cpu_count()
+
+    if arguments['--VBR'] is None:
+        arguments['--VBR'] = 0
 
     convert(arguments['<SOURCES>'],
             output=arguments['--output'],
