@@ -356,7 +356,7 @@ def _do_convert(source, dest, vbr=0, cbr=None, lame_args=None, overwrite=False):
 
     # uses flac to decode and pipe it's output into lame with the correct
     # arguments.
-    flac_args = ('flac', '-d', '-c')
+    flac_args = ('flac', '-d', '-c', '-s')
     with open(os.devnull) as devnull:
         try:
             ps_flac = subprocess.Popen(flac_args + (source, ),
