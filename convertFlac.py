@@ -16,6 +16,8 @@ Options:
                          conversions. Defaults to using half of available cores. Also
                          accepts 'MAX' as an argument to use all availabe cores.
 
+  --nice=N               Set process nice level for encoding/decoding [default: 10].
+
   Directory Options:
     These options are used for determining behavior when being passed a
     directory
@@ -88,6 +90,7 @@ def convert(targets,
             overwrite=False,
             delete_flacs=False,
             num_cores=None,
+            nice_val=10,
             replacement=None,
             verbose=False):
     """
@@ -124,13 +127,12 @@ def convert(targets,
                              " (no flags)'")
         replacement = tuple(replacement.split(sep)[1:3])
 
-
-    folders_to_clone, target_files = generate_outputs(
-        targets, output,
-        clone=clone,
-        recursive=recursive,
-        folder_suffix=folder_suffix,
-        sub=replacement)
+    folders_to_clone, target_files = generate_outputs(targets,
+                                                      output,
+                                                      clone=clone,
+                                                      recursive=recursive,
+                                                      folder_suffix=folder_suffix,
+                                                      sub=replacement)
 
     for source, dest in folders_to_clone:
         clone_folder(source, dest, recursive=recursive)
@@ -147,9 +149,8 @@ def convert(targets,
             try:
                 print('Conversion done for {}\nCopying tags...'.format(old))
             except UnicodeEncodeError:
-                print(
-                    'Conversion Done for {}\nCopying tags...'.format(old.encode(
-                        'mbcs', 'replace')))
+                print('Conversion Done for {}\nCopying tags...'.format(
+                    old.encode('mbcs', 'replace')))
 
         copy_tags(old, new, verbose=True)
         if verbose:
@@ -171,7 +172,8 @@ def convert(targets,
         'vbr': vbr_level,
         'cbr': cbr,
         'lame_args': lame_args,
-        'overwrite': overwrite
+        'overwrite': overwrite,
+        'nice_val': nice_val,
     }
 
     with ThreadPoolExecutor(max_workers=num_cores) as pool:
@@ -184,7 +186,11 @@ def convert(targets,
                         **kwargs).add_done_callback(conversion_callback)
 
 
-def generate_outputs(targets, output, clone=False, recursive=False, folder_suffix=None,
+def generate_outputs(targets,
+                     output,
+                     clone=False,
+                     recursive=False,
+                     folder_suffix=None,
                      sub=None):
     """
     Takes in a list of targets and generates tuples containing the apropriate
@@ -291,8 +297,10 @@ def find_flacs(folder, recursive):
         flacs = [os.path.abspath(f) for f in all_files if f.endswith('.flac')]
         return flacs
     else:
-        return [os.path.abspath(os.path.join(folder, f)) for f in os.listdir(folder)
-                if f.endswith('.flac')]
+        return [
+            os.path.abspath(os.path.join(folder, f)) for f in os.listdir(folder)
+            if f.endswith('.flac')
+        ]
 
 
 @contextlib.contextmanager
@@ -342,7 +350,13 @@ def win_popen_workaround(conversion):
 
 
 @win_popen_workaround
-def _do_convert(source, dest, vbr=0, cbr=None, lame_args=None, overwrite=False):
+def _do_convert(source,
+                dest,
+                vbr=0,
+                cbr=None,
+                lame_args=None,
+                overwrite=False,
+                nice_val=10):
     """Convert flacs to mp3 V0 using lame and Copies tags from flac to new MP3."""
     new_path = os.path.dirname(dest)
     if not os.path.exists(new_path):
@@ -356,10 +370,14 @@ def _do_convert(source, dest, vbr=0, cbr=None, lame_args=None, overwrite=False):
 
     # uses flac to decode and pipe it's output into lame with the correct
     # arguments.
+    def set_nice():
+        os.nice(nice_val)
+
     flac_args = ('flac', '-d', '-c', '-s')
     with open(os.devnull) as devnull:
         try:
             ps_flac = subprocess.Popen(flac_args + (source, ),
+                                       preexec_fn=set_nice,
                                        stdout=subprocess.PIPE,
                                        stderr=devnull)
         except OSError:
@@ -368,20 +386,22 @@ def _do_convert(source, dest, vbr=0, cbr=None, lame_args=None, overwrite=False):
 
         if lame_args is None:
             if cbr is None:
-                args = ['lame', '-', dest, '-V', str(vbr)]
-                ps_lame = subprocess.call(
-                    args,
-                    stdin=ps_flac.stdout,
-                    stdout=devnull,
-                    stderr=devnull)
+                args = ['lame', '-', dest, '-V', str(vbr), '--silent']
+                ps_lame = subprocess.call(args,
+                                          preexec_fn=set_nice,
+                                          stdin=ps_flac.stdout,
+                                          stdout=devnull,
+                                          stderr=devnull)
             else:
                 ps_lame = subprocess.call(
-                    ('lame', '-', dest) + ('-b', str(cbr)),
+                    ('lame', '-', dest) + ('-b', str(cbr), '--silent'),
+                    preexec_fn=set_nice,
                     stdin=ps_flac.stdout,
                     stderr=devnull,
                     stdout=devnull)
         else:
-            ps_lame = subprocess.call(('lame', '-', dest) + lame_args,
+            ps_lame = subprocess.call(('lame', '-', dest, '--silent') + lame_args,
+                                      preexec_fn=set_nice,
                                       stdin=ps_flac.stdout,
                                       stderr=devnull,
                                       stdout=devnull)
@@ -432,8 +452,10 @@ def clone_folder(source, dest, recursive=False):
     else:
         if not os.path.exists(dest):
             os.mkdir(dest)
-        files = [os.path.join(source, f) for f in os.listdir(source)
-                 if os.path.isfile(os.path.join(source, f))]
+        files = [
+            os.path.join(source, f) for f in os.listdir(source)
+            if os.path.isfile(os.path.join(source, f))
+        ]
         to_copy = []
         for f in files:
             if f.endswith('.flac'):
@@ -480,6 +502,7 @@ def main():
             overwrite=arguments['--overwrite'],
             delete_flacs=arguments['--delete-flacs'],
             num_cores=arguments['--num-cores'],
+            nice_val=int(arguments['--nice']),
             replacement=arguments['--replace'],
             verbose=True)
 
