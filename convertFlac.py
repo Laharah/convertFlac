@@ -70,7 +70,9 @@ import sys
 import shutil
 import subprocess
 import tempfile
+import threading
 import warnings
+import queue
 
 from mutagen import MutagenError
 from mutagen import File as mutagenFile
@@ -134,11 +136,24 @@ def convert(targets,
                                                       folder_suffix=folder_suffix,
                                                       sub=replacement)
 
+    print('Cloning folders...')
     for source, dest in folders_to_clone:
         clone_folder(source, dest, recursive=recursive)
 
     # lame_args need to be in tuple format for subprocess call
     lame_args = tuple(lame_args.split()) if lame_args else None
+    print_queue = queue.Queue()
+
+    def print_manager():
+        while True:
+            job = print_queue.get()
+            print(job)
+            print_queue.task_done()
+
+    t = threading.Thread(target=print_manager)
+    t.daemon=True
+    t.start()
+    del t
 
     def conversion_callback(future):
         old, new = future.result()
@@ -147,14 +162,14 @@ def convert(targets,
             return
         if verbose:
             try:
-                print('Conversion done for {}\nCopying tags...'.format(old))
+                print_queue.put('Conversion done for {}\nCopying tags...'.format(old))
             except UnicodeEncodeError:
-                print('Conversion Done for {}\nCopying tags...'.format(
+                print_queue.put('Conversion Done for {}\nCopying tags...'.format(
                     old.encode('mbcs', 'replace')))
 
-        copy_tags(old, new, verbose=True)
+        copy_tags(old, new, verbose=True, print_queue=print_queue)
         if verbose:
-            print('Done!\n')
+            print_queue.put('Done!\n')
 
         if delete_flacs:
             os.remove(old)
@@ -177,6 +192,7 @@ def convert(targets,
     }
 
     with ThreadPoolExecutor(max_workers=num_cores) as pool:
+        print('Beginning conversion for {} files.'.format(len(target_files)))
         for source, dest in target_files:
             if not target_is_valid(source):
                 warnings.warn(
@@ -409,8 +425,10 @@ def _do_convert(source,
     return source, dest
 
 
-def copy_tags(source, target, verbose=False):
+def copy_tags(source, target, verbose=False, print_queue=None):
     """Uses mutagen to duplicate valid tags from flac to MP3"""
+    if print_queue is None:
+        print_queue = queue.Queue()
     try:
         flac_meta = FLAC(source)
     except MutagenError:
@@ -421,7 +439,7 @@ def copy_tags(source, target, verbose=False):
         mp3_meta = EasyID3(target)
     except MutagenError:
         if verbose:
-            print('adding id3 header to mp3...')
+            print_queue.put('adding id3 header to mp3...')
         mp3_meta = mutagenFile(target, easy=True)
         mp3_meta.add_tags()
 
@@ -429,13 +447,13 @@ def copy_tags(source, target, verbose=False):
         # leveling tags causes errors (too quiet on random tracks) so they are omitted
         if key.startswith('replay'):
             if verbose:
-                print('skipping leveling key:', key)
+                print_queue.put('skipping leveling key:', key)
         else:
             try:
                 mp3_meta[key] = flac_meta[key]
             except EasyID3KeyError:
                 if verbose:
-                    print('could not add key: ', key)
+                    print_queue.put('could not add key: ', key)
     mp3_meta.save()
 
 
