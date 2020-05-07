@@ -374,37 +374,37 @@ def _do_convert(source,
         os.nice(nice_val)
 
     flac_args = ('flac', '-d', '-c', '-s')
-    with open(os.devnull) as devnull:
-        try:
-            ps_flac = subprocess.Popen(flac_args + (source, ),
-                                       preexec_fn=set_nice,
-                                       stdout=subprocess.PIPE,
-                                       stderr=devnull)
-        except OSError:
-            raise OSError("FLAC executible is not installed or not in path!")
-    # lame arguments hierarchy goes lameargs > CBR > VBR.
+    try:
+        ps_flac = subprocess.Popen(flac_args + (source, ),
+                                   preexec_fn=set_nice,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.DEVNULL)
+    except OSError:
+        raise OSError("FLAC executible is not installed or not in path!")
 
-        if lame_args is None:
-            if cbr is None:
-                args = ['lame', '-', dest, '-V', str(vbr), '--silent']
-                ps_lame = subprocess.call(args,
-                                          preexec_fn=set_nice,
-                                          stdin=ps_flac.stdout,
-                                          stdout=devnull,
-                                          stderr=devnull)
-            else:
-                ps_lame = subprocess.call(
-                    ('lame', '-', dest) + ('-b', str(cbr), '--silent'),
-                    preexec_fn=set_nice,
-                    stdin=ps_flac.stdout,
-                    stderr=devnull,
-                    stdout=devnull)
-        else:
-            ps_lame = subprocess.call(('lame', '-', dest, '--silent') + lame_args,
+
+# lame arguments hierarchy goes lameargs > CBR > VBR.
+
+    if lame_args is None:
+        if cbr is None:
+            args = ['lame', '-', dest, '-V', str(vbr), '--silent']
+            ps_lame = subprocess.call(args,
                                       preexec_fn=set_nice,
                                       stdin=ps_flac.stdout,
-                                      stderr=devnull,
-                                      stdout=devnull)
+                                      stdout=subprocess.DEVNULL,
+                                      stderr=subprocess.DEVNULL)
+        else:
+            ps_lame = subprocess.call(('lame', '-', dest) + ('-b', str(cbr), '--silent'),
+                                      preexec_fn=set_nice,
+                                      stdin=ps_flac.stdout,
+                                      stderr=subprocess.DEVNULL,
+                                      stdout=subprocess.DEVNULL)
+    else:
+        ps_lame = subprocess.call(('lame', '-', dest, '--silent') + lame_args,
+                                  preexec_fn=set_nice,
+                                  stdin=ps_flac.stdout,
+                                  stderr=subprocess.DEVNULL,
+                                  stdout=subprocess.DEVNULL)
     ps_flac.wait()
     return source, dest
 
@@ -474,12 +474,16 @@ def main():
     arguments = docopt.docopt(__doc__, version='1.05.03')
 
     try:
-        ps = subprocess.call(('flac', '--version'))
+        ps = subprocess.call(('flac', '--version'),
+                             stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL)
     except OSError:
         print('Could not find flac.exe! please ensure it is installed and in your path.')
         exit(1)
     try:
-        ps = subprocess.call(('lame', '--version'))
+        ps = subprocess.call(('lame', '--version'),
+                             stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL)
     except OSError:
         print('Could not find lame.exe! please ensure it is installed and in your path.')
         exit(1)
