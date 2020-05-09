@@ -200,6 +200,7 @@ def convert(targets,
                      'Skipping...').format(source))
             pool.submit(_do_convert, source, dest,
                         **kwargs).add_done_callback(conversion_callback)
+    print_queue.join()
 
 
 def generate_outputs(targets,

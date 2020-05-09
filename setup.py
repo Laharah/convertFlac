@@ -8,7 +8,7 @@ if sys.version_info.major == 2:
 
 setup(
     name='convertFlac',
-    version='1.10',
+    version='1.11',
     packages=[''],
     url='https://github.com/Laharah/convertFlac',
     license='GNU',
