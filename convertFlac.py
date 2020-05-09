@@ -386,8 +386,11 @@ def _do_convert(source,
 
     # uses flac to decode and pipe it's output into lame with the correct
     # arguments.
-    def set_nice():
-        os.nice(nice_val)
+    if sys.platform == 'win32':  # preexe/nice is not supported on windows
+        set_nice = None
+    else:
+        def set_nice():
+            os.nice(nice_val)
 
     flac_args = ('flac', '-d', '-c', '-s')
     try:
