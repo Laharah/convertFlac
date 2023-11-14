@@ -517,6 +517,11 @@ def main():
     if arguments['--VBR'] is None:
         arguments['--VBR'] = 0
 
+    targets = arguments['<SOURCES>']
+    if len(targets) == 1 and targets[0] == '-':
+        t = sys.stdin.read().strip().split("\n")
+        arguments['<SOURCES>'] = t
+
     convert(arguments['<SOURCES>'],
             output=arguments['--output'],
             clone=arguments['--clone'],
